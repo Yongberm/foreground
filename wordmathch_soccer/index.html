@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
+    />
+    <meta name="theme-color" content="#061d56" />
+    <title>Word Match Soccer</title>
+    <!-- 사장님(10-02): 한글 표기는 나눔스퀘어라운드 ExtraBold. 첫 화면에 대체 글꼴이 보이지 않게 미리 받는다. -->
+    <link
+      rel="preload"
+      href="assets/font/NanumFontSetup_OTF_SQUARE_ROUND/NanumSquareRoundOTFEB.otf"
+      as="font"
+      type="font/otf"
+      crossorigin
+    />
+    <link rel="stylesheet" href="styles.css?v=20261015-4" />
+  </head>
+  <body>
+    <main id="app" class="app-shell">
+      <section
+        id="gameStage"
+        class="game-stage"
+        aria-label="Word Match Soccer"
+      >
+        <img
+          class="stadium-background"
+          src="assets/bg.png"
+          alt=""
+          width="1920"
+          height="1080"
+          draggable="false"
+        />
+
+        <div class="background-vignette" aria-hidden="true"></div>
+
+        <img
+          class="stadium-light stadium-light-left"
+          src="assets/light_left.png"
+          alt=""
+          width="955"
+          height="893"
+          draggable="false"
+        />
+        <img
+          class="stadium-light stadium-light-right"
+          src="assets/light_right.png"
+          alt=""
+          width="951"
+          height="893"
+          draggable="false"
+        />
+
+        <button
+          id="soundButton"
+          class="icon-button sound-button"
+          type="button"
+          aria-label="소리 끄기"
+          aria-pressed="true"
+        >
+          <img
+            id="soundIcon"
+            src="assets/btn_sound_on.png"
+            alt=""
+            width="62"
+            height="66"
+            draggable="false"
+          />
+        </button>
+
+        <button
+          id="closeButton"
+          class="icon-button close-button"
+          type="button"
+          aria-label="게임 닫기"
+        >
+          <img
+            src="assets/btn_close.png"
+            alt=""
+            width="62"
+            height="66"
+            draggable="false"
+          />
+        </button>
+
+        <section id="startScreen" class="screen start-screen" aria-label="시작 화면">
+          <img
+            class="game-logo"
+            src="assets/logo.png"
+            alt="Word Match"
+            width="628"
+            height="590"
+            draggable="false"
+          />
+
+          <!-- 2차 검수 공통-9: 동화 정보. 게임 정보 API(info)의 title · subtitle 을 받은 뒤에 보인다. -->
+          <div id="storyInfo" class="story-info" role="group" aria-label="동화 정보" hidden>
+            <p id="storyTitle" class="story-info-line"></p>
+            <p id="storySubtitle" class="story-info-line"></p>
+          </div>
+
+          <nav class="start-menu" aria-label="시작 메뉴">
+            <button
+              id="startButton"
+              class="start-menu-button start-menu-button-play"
+              type="button"
+              aria-busy="true"
+              disabled
+            >
+              <span>Start</span>
+            </button>
+            <button
+              id="rankingButton"
+              class="start-menu-button start-menu-button-ranking"
+              type="button"
+            >
+              <span>Ranking</span>
+            </button>
+          </nav>
+
+          <section
+            id="loadingPanel"
+            class="loading-panel"
+            role="status"
+            aria-live="polite"
+          >
+            <span class="loading-spinner" aria-hidden="true"></span>
+            <strong id="loadingTitle">Loading...</strong>
+            <span id="loadingMessage">게임 데이터를 준비하고 있습니다.</span>
+            <button id="retryLoadButton" class="retry-load-button" type="button" hidden>
+              Retry
+            </button>
+          </section>
+
+          <button
+            id="helpButton"
+            class="start-help-button"
+            type="button"
+            aria-label="도움말"
+          >
+            <img
+              src="assets/btn_help.png"
+              alt=""
+              width="62"
+              height="63"
+              draggable="false"
+            />
+          </button>
+        </section>
+
+        <section
+          id="helpScreen"
+          class="screen help-screen"
+          role="dialog"
+          aria-labelledby="helpScreenTitle"
+          hidden
+        >
+          <img
+            class="help-background"
+            src="assets/help/help_bg.png"
+            alt=""
+            width="1920"
+            height="1080"
+            draggable="false"
+          />
+          <h1 id="helpScreenTitle" class="visually-hidden">도움말</h1>
+
+          <div class="help-content-viewport">
+            <div
+              id="helpContent"
+              class="help-content"
+            ></div>
+            <div
+              id="helpStatus"
+              class="help-status"
+              role="status"
+              aria-live="polite"
+            >
+              <span id="helpStatusMessage">도움말을 불러오는 중입니다.</span>
+              <button
+                id="helpRetryButton"
+                class="help-retry-button"
+                type="button"
+                hidden
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="playScreen"
+          class="screen play-screen"
+          aria-label="영어 단어 맞히기 게임"
+          hidden
+        >
+          <canvas
+            id="gameParticleCanvas"
+            class="particle-canvas game-particle-canvas"
+            width="1920"
+            height="1080"
+            aria-hidden="true"
+          ></canvas>
+
+          <div class="quiz-panel">
+            <img
+              src="assets/game/quizebox.png"
+              alt=""
+              width="857"
+              height="283"
+              draggable="false"
+            />
+            <div id="quizWordRow" class="quiz-word-row">
+              <strong id="quizWord" class="quiz-word is-english">come back</strong>
+            </div>
+            <span id="questionCountdown" class="question-countdown" aria-label="문제 6초" hidden>
+              <span id="questionCountdownTimer" class="question-countdown-timer" aria-hidden="true">
+                <span>문제</span>
+                <span id="questionCountdownValue" class="question-countdown-value">6</span>
+                <span>초</span>
+              </span>
+              <span id="questionCountdownStatus" class="question-countdown-status" hidden></span>
+            </span>
+          </div>
+
+          <button id="choiceLeft" class="choice-button choice-left" type="button">
+            <span>(제자리로) 돌아오다, 되돌아가다</span>
+          </button>
+          <button id="choiceRight" class="choice-button choice-right" type="button">
+            <span>(…에서) 나오다, 생겨나다</span>
+          </button>
+
+          <div id="actionScene" class="action-scene" aria-hidden="true">
+            <div id="goalkeeperRig" class="goalkeeper-rig">
+              <img
+                id="goalkeeper"
+                class="goalkeeper"
+                src="assets/game/goalkeeper_waite.webp"
+                alt=""
+                width="400"
+                height="400"
+                draggable="false"
+              />
+              <img
+                id="caughtBall"
+                class="caught-ball"
+                src="assets/game/ball.png"
+                alt=""
+                width="74"
+                height="74"
+                draggable="false"
+              />
+            </div>
+            <img
+              id="kicker"
+              class="kicker"
+              src="assets/game/kicker_waite.webp"
+              alt=""
+              width="400"
+              height="400"
+              draggable="false"
+            />
+            <img
+              id="gameBall"
+              class="game-ball"
+              src="assets/game/ball.png"
+              alt=""
+              width="112"
+              height="112"
+              draggable="false"
+            />
+          </div>
+
+          <div id="feedbackText" class="feedback-text" role="status" aria-live="assertive"></div>
+          <div id="comboText" class="combo-text" aria-live="polite"></div>
+
+          <section class="game-hud" aria-label="게임 상태">
+            <img
+              class="hud-background"
+              src="assets/game/ui_bar.png?v=20261008-1"
+              alt=""
+              width="1920"
+              height="199"
+              draggable="false"
+            />
+            <img
+              class="score-box"
+              src="assets/game/box_score.png"
+              alt=""
+              width="1881"
+              height="836"
+              draggable="false"
+            />
+            <!-- 보너스가 붙는 순간 Score 상자 둘레에 뜨는 금빛 테두리 · 반짝임(형제 카드 · 바다속 · 두더지 방식). -->
+            <span id="scoreBurst" class="score-burst" aria-hidden="true"></span>
+            <output id="scoreValue" class="score-value" aria-label="점수 0">0</output>
+
+            <div class="total-timer" aria-label="전체 남은 시간">
+              <img
+                class="timer-clock"
+                src="assets/game/ui_timer1.png"
+                alt=""
+                width="132"
+                height="111"
+                draggable="false"
+              />
+              <img
+                class="timer-track"
+                src="assets/game/ui_timer3.png"
+                alt=""
+                width="713"
+                height="55"
+                draggable="false"
+              />
+              <span class="timer-fill-mask" aria-hidden="true">
+                <img
+                  class="timer-fill"
+                  src="assets/game/ui_timer2.png"
+                  alt=""
+                  width="750"
+                  height="99"
+                  draggable="false"
+                />
+              </span>
+              <output id="totalTimeText" class="total-time-text">00:40</output>
+              <!-- 남은 10초부터 초록 타임바를 고르게 빨갛게 바꾸는 색 필터(OX 와 같은 행렬). 밝기는 살리고 색만 빨강으로 모은다. -->
+              <svg class="svg-defs" width="0" height="0" aria-hidden="true" focusable="false">
+                <filter id="timerFillRed" color-interpolation-filters="sRGB">
+                  <feColorMatrix type="matrix" values="0.24 0.48 0.09 0 0.30  0.03 0.06 0.01 0 0.03  0.04 0.08 0.015 0 0.05  0 0 0 1 0" />
+                </filter>
+              </svg>
+            </div>
+
+            <div
+              id="comboMeter"
+              class="combo-meter"
+              role="status"
+              aria-live="polite"
+              aria-label="콤보 0/3"
+            >
+              <span
+                class="combo-ball combo-ball-one"
+                data-combo-step="1"
+                aria-hidden="true"
+              >
+                <img
+                  class="combo-ball-image"
+                  src="assets/game/ui_bonus1.png"
+                  alt=""
+                  draggable="false"
+                />
+                <strong class="combo-step-gain" hidden>+100</strong>
+              </span>
+              <span
+                class="combo-ball combo-ball-two"
+                data-combo-step="2"
+                aria-hidden="true"
+              >
+                <img
+                  class="combo-ball-image"
+                  src="assets/game/ui_bonus2.png"
+                  alt=""
+                  draggable="false"
+                />
+                <strong class="combo-step-gain" hidden>+100</strong>
+              </span>
+              <span
+                class="combo-ball combo-ball-special"
+                data-combo-step="3"
+                aria-hidden="true"
+              >
+                <img
+                  class="combo-ball-image"
+                  src="assets/game/ui_bonus3.png"
+                  alt=""
+                  draggable="false"
+                />
+              </span>
+            </div>
+          </section>
+
+          <section id="endOverlay" class="end-overlay" aria-label="게임 결과" hidden>
+            <button
+              id="resultHomeButton"
+              class="icon-button result-home-button"
+              type="button"
+              aria-label="시작 화면으로"
+            >
+              <img
+                src="assets/btn_close.png"
+                alt=""
+                width="62"
+                height="66"
+                draggable="false"
+              />
+            </button>
+
+            <img
+              id="resultFox"
+              class="result-fox"
+              hidden
+              src="assets/result/good.png?v=2026-09-30-1"
+              alt=""
+              width="238"
+              height="270"
+              draggable="false"
+            />
+            <img
+              class="result-layout"
+              src="assets/result/bg.png?v=20261008-1"
+              alt=""
+              width="1920"
+              height="1080"
+              draggable="false"
+            />
+            <canvas
+              id="resultParticleCanvas"
+              class="particle-canvas result-particle-canvas"
+              width="1920"
+              height="1080"
+              aria-hidden="true"
+            ></canvas>
+            <img
+              id="resultTitle"
+              class="result-title"
+              src="assets/result/result_text1.png"
+              alt="Good"
+              width="628"
+              height="163"
+              draggable="false"
+            />
+
+            <output id="resultCorrectPoints" class="result-points result-points-correct" aria-label="맞힌 문제 0개"><span id="resultCorrectCount" class="result-points-number">0</span></output>
+            <output id="resultIncorrectPoints" class="result-points result-points-incorrect" aria-label="못 맞힌 문제 0개"><span id="resultIncorrectCount" class="result-points-number">0</span></output>
+            <output id="resultBonusPoints" class="result-points result-points-bonus" aria-label="보너스 점수 0점">0</output>
+
+            <div class="result-total" aria-label="내 점수">
+              <span id="resultRank" class="result-rank">-</span>
+              <img
+                class="result-point-box"
+                src="assets/result/result_point_box.png?v=20260929-1"
+                alt=""
+                width="265"
+                height="81"
+                draggable="false"
+              />
+              <output id="resultTotalScore" class="result-total-score" aria-label="0점">
+                <span id="resultScoreNumber" class="result-score-number">0</span>
+                <span class="result-score-unit">점</span>
+              </output>
+            </div>
+
+            <p id="resultMessage" class="result-message" role="status" aria-live="polite"></p>
+
+            <nav class="result-actions" aria-label="결과 화면 메뉴">
+              <button
+                id="incorrectAnswersButton"
+                class="result-action"
+                type="button"
+                aria-label="오답 없음"
+                disabled
+              >
+                <img src="assets/result/btn1.png" alt="Incorrect Answers" width="379" height="91" draggable="false" />
+              </button>
+              <button
+                id="resultRankingButton"
+                class="result-action"
+                type="button"
+                aria-label="랭킹, 준비 중"
+                disabled
+              >
+                <img src="assets/result/btn3.png" alt="Ranking" width="379" height="90" draggable="false" />
+              </button>
+              <button id="tryAgainButton" class="result-action" type="button" aria-label="다시 하기">
+                <img src="assets/result/btn2.png" alt="Try Again" width="379" height="91" draggable="false" />
+              </button>
+            </nav>
+
+            <div id="incorrectAnswerDialog" class="incorrect-answer-dialog" hidden>
+              <button
+                id="incorrectAnswerBackdrop"
+                class="incorrect-answer-backdrop"
+                type="button"
+                aria-label="오답 목록 닫기"
+              ></button>
+
+              <section
+                class="incorrect-answer-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="incorrectAnswerDialogTitle"
+              >
+                <h2 id="incorrectAnswerDialogTitle" class="visually-hidden">
+                  Incorrect Answers
+                </h2>
+                <img
+                  class="incorrect-answer-background"
+                  src="assets/incorrect-answer/bg_incorrect.png"
+                  alt=""
+                  width="1347"
+                  height="980"
+                  draggable="false"
+                />
+                <button
+                  id="incorrectAnswerCloseButton"
+                  class="incorrect-answer-close"
+                  type="button"
+                  aria-label="오답 목록 닫기"
+                >
+                  <img
+                    src="assets/incorrect-answer/btn_close_popup.png"
+                    alt=""
+                    width="77"
+                    height="87"
+                    draggable="false"
+                  />
+                </button>
+
+                <div class="incorrect-answer-table" role="table" aria-label="오답 목록">
+                  <div class="incorrect-answer-header incorrect-answer-grid" role="row">
+                    <span aria-hidden="true"></span>
+                    <span role="columnheader">단어</span>
+                    <span role="columnheader">뜻</span>
+                  </div>
+                  <div
+                    id="incorrectAnswerList"
+                    class="incorrect-answer-list"
+                    role="rowgroup"
+                  ></div>
+                </div>
+              </section>
+            </div>
+          </section>
+        </section>
+
+        <div id="rankingDialog" class="ranking-dialog" hidden>
+          <button
+            id="rankingBackdrop"
+            class="ranking-backdrop"
+            type="button"
+            tabindex="-1"
+            aria-label="랭킹 닫기"
+          ></button>
+
+          <section
+            class="ranking-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="rankingDialogTitle"
+          >
+            <header class="ranking-modal-header">
+              <h2 id="rankingDialogTitle">Ranking</h2>
+              <button
+                id="rankingCloseButton"
+                class="ranking-close"
+                type="button"
+                aria-label="랭킹 닫기"
+              >
+                <img
+                  src="assets/incorrect-answer/btn_close_popup.png"
+                  alt=""
+                  width="77"
+                  height="87"
+                  draggable="false"
+                />
+              </button>
+            </header>
+
+            <section
+              id="rankingMemberSummary"
+              class="ranking-member-summary"
+              aria-label="내 최고 점수"
+              hidden
+            >
+              <span class="ranking-member-badge" aria-hidden="true">
+                <img id="rankingMemberBadgeImage" alt="" hidden />
+                <span id="rankingMemberBadgeFallback">★</span>
+              </span>
+              <span class="ranking-member-label">My Best</span>
+              <strong id="rankingMemberName" class="ranking-member-name">-</strong>
+              <strong id="rankingMemberScore" class="ranking-member-score">0</strong>
+            </section>
+
+            <div id="rankingStatus" class="ranking-status" role="status" hidden></div>
+
+            <div
+              id="rankingTable"
+              class="ranking-table"
+              role="table"
+              aria-label="랭킹"
+              hidden
+            >
+              <div class="ranking-table-header ranking-grid" role="row">
+                <span role="columnheader">순위</span>
+                <span role="columnheader" aria-label="배지"></span>
+                <span role="columnheader">닉네임</span>
+                <span role="columnheader">최고 점수</span>
+              </div>
+              <div
+                id="rankingList"
+                class="ranking-list"
+                role="rowgroup"
+                tabindex="0"
+                aria-label="랭킹 목록"
+              ></div>
+            </div>
+          </section>
+        </div>
+
+        <div id="statusToast" class="status-toast" role="status" aria-live="polite"></div>
+      </section>
+
+    </main>
+
+    <script id="gameConfig" type="application/json">
+      {
+        "schemaVersion": 1,
+        "deployment": {
+          "apiBaseUrl": "https://apis-review.littlefox.com",
+          "gameType": "word_match_02"
+        },
+        "localApiTest": {
+          "enabled": true,
+          "fcId": "C0011224",
+          "locale": "ko_KR"
+        },
+        "timing": {
+          "gameDurationMs": 40000,
+          "questionDurationMs": 6000,
+          "resultDurationMs": 1900
+        },
+        "scoring": {
+          "correct": 100,
+          "incorrect": -10,
+          "comboEvery": 3,
+          "comboBonus": 100
+        },
+        "questions": [
+          {
+            "word": "classroom",
+            "answer": "교실",
+            "decoy": "안에, 안쪽에, 안으로",
+            "soundUrl": "https://cdn.littlefox.co.kr/contents/vocab/c/c756662595bb0948d9bbe352fef1c53a.mp3?1786460399"
+          },
+          {
+            "word": "inside",
+            "answer": "안에, 안쪽에, 안으로",
+            "decoy": "교실",
+            "soundUrl": "https://cdn.littlefox.co.kr/contents/vocab/3/335cf4508dd597be4bfc9caa3e08b901.mp3?1786460399"
+          },
+          {
+            "word": "spin",
+            "answer": "1. (팽이 등을) 돌리다, 회전시키다, 2. (빙빙) 돌다, 회전하다",
+            "decoy": "1. 지구본, (2. 지구, 세계)",
+            "soundUrl": "https://cdn.littlefox.co.kr/contents/vocab/4/40d4a203bc881c2d59c6fa3f6ffe0848.mp3?1786460399"
+          },
+          {
+            "word": "globe",
+            "answer": "1. 지구본, (2. 지구, 세계)",
+            "decoy": "사과",
+            "soundUrl": "https://cdn.littlefox.co.kr/contents/vocab/7/78f9151935d912f37259b72c2036ec6b.mp3?1786460399"
+          },
+          {
+            "word": "apple",
+            "answer": "사과",
+            "decoy": "1. (시계) 바늘, (2. 손)",
+            "soundUrl": "https://cdn.littlefox.co.kr/contents/vocab/1/1f3870be274f6c49b3e31a0c6728957f.mp3?1786460399"
+          },
+          {
+            "word": "hand",
+            "answer": "1. (시계) 바늘, (2. 손)",
+            "decoy": "조금, 약간의, 몇몇의",
+            "soundUrl": "https://cdn.littlefox.co.kr/contents/vocab/5/573ce5969e9884d49d4fab77b09a306a.mp3?1786460399"
+          }
+        ]
+      }
+    </script>
+    <script src="api-client.js?v=20260811-2"></script>
+    <script src="content-loader.js?v=20261015-1"></script>
+    <script src="script.js?v=20261015-1"></script>
+  </body>
+</html>

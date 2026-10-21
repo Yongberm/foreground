@@ -1,0 +1,2916 @@
+/*
+ * Word Match - 두더지 (워드매치 6단계)
+ *
+ * 모든 좌표는 1920x1080 무대 안의 값이다. 화면 크기에 맞추는 일은 script.js가
+ * --stage-scale 하나만 바꿔서 처리한다. 여기서는 축소를 신경 쓰지 않는다.
+ * 형제 방(spellingbuilde_start / wordmathch_spelling)의 공통 층을 그대로 옮겼고,
+ * 게임 화면만 두더지 에셋에 맞춰 새로 짰다.
+ */
+
+@font-face {
+  font-family: "Sofia Pro Soft";
+  src: url("assets/font/SofiaProSoft-Light.otf") format("opentype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+  /* hhea(750/250)와 OS/2 win(1079/263)이 달라 macOS/Windows가 서로 다른
+     베이스라인을 잡는다. 여기서 고정해 두 플랫폼을 같게 만든다. */
+  ascent-override: 75%;
+  descent-override: 25%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Sofia Pro Soft";
+  src: url("assets/font/SofiaProSoft-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  ascent-override: 75%;
+  descent-override: 25%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Sofia Pro Soft";
+  src: url("assets/font/SofiaProSoft-Medium.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  ascent-override: 75%;
+  descent-override: 25%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Sofia Pro Soft";
+  src: url("assets/font/SofiaProSoft-Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  ascent-override: 75%;
+  descent-override: 25%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Lexend Game";
+  src: url("assets/font/Lexend-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  ascent-override: 75%;
+  descent-override: 25%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Lexend Game";
+  src: url("assets/font/Lexend-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  ascent-override: 75%;
+  descent-override: 25%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Lexend Game";
+  src: url("assets/font/Lexend-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  ascent-override: 75%;
+  descent-override: 25%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Lexend Game";
+  src: url("assets/font/Lexend-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  ascent-override: 75%;
+  descent-override: 25%;
+  line-gap-override: 0%;
+}
+
+/*
+ * 한글 글꼴(사장님 지시 2026-10-02 "한글 표기는 전부 이걸 사용하도록" — 부모 원장 027fbd6b4ff949a3).
+ * 나눔스퀘어라운드 **ExtraBold(OTFEB)** 한 벌만 쓴다 — 사장님 14:20 "몇몇 프로젝트 확인해보니 NanumSquareRoundOTFEB로
+ * 바꿔서 적용하라고 전해"(부모 원장 9b16098d896b5cfb). 처음 전달은 Bold(OTFB)였다. 같은 폴더의 B · R · L 과 TTF 폴더는
+ * 쓰지 않지만 사장님이 넣은 파일이라 지우거나 옮기거나 권한을 바꾸지 않는다.
+ *  - 이름은 이 맥에 깔린 글꼴과 겹치지 않게 "NanumSquareRound Game" 으로 짓는다("Lexend Game" 과 같은 방식).
+ *    깔린 나눔스퀘어라운드가 있으면 그쪽이 잡혀 기기마다 달라 보인다.
+ *  - font-weight 를 100 900 범위로 선언한다. 한 굵기(400)로만 선언하면 이 방 한글 글자(700 · 800)를 그릴 때
+ *    브라우저가 굵은 글꼴 위에 가짜 굵게를 한 번 더 덧씌운다. 범위로 두면 어떤 굵기 요청에도 이 한 벌을 그대로 쓴다.
+ *  - font-display: block — 받기 전 잠깐은 글자를 그리지 않고 기다린다. 대체 글꼴이 번쩍 보였다가 바뀌지 않게.
+ *    받지 못하면(경로가 틀리면) 기다리지 않고 곧바로 대체 글꼴로 그린다 — 글자가 숨지 않는다.
+ *    script.js 는 시작 화면을 열기 전에 이 글꼴을 받아 두고(loadKoreanFont), index.html 은 미리 받기를 건다.
+ */
+@font-face {
+  font-family: "NanumSquareRound Game";
+  src: url("assets/font/NanumFontSetup_OTF_SQUARE_ROUND/NanumSquareRoundOTFEB.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+}
+
+/*
+ * 오답 목록(Incorrect Answers) 전용 한글 글꼴 — 사장님 2026-10-15 "1번으로 통일 해 / 텍스트 말하는거야"(관리방 전달, 1번 =
+ * 오답 목록 planet / 행성, 뜻 글자가 보통 굵기). 이 방 한글은 위 ExtraBold 한 벌이라 굵기 값과 무관하게 늘 EB 로 그려져
+ * 오답 목록 뜻이 굵게 나왔다. 관리방이 1번처럼 보인다고 한 레이싱 방과 같은 나눔스퀘어라운드 **Bold(OTFB)** 파일(md5 같음)을
+ * 오답 목록에만 쓴다 — 같은 크기 '행성 기독교인' 잉크로 EB 1551 · B 1276 · R 989(이 방 화면에서 잼). 다른 한글 자리는 그대로 EB 다.
+ * 이름을 따로 지어 위 한 벌과 섞이지 않게 하고, 굵기 범위 · block 은 위와 같은 까닭이다. script.js 가 시작할 때 미리 받아 둔다.
+ */
+@font-face {
+  font-family: "NanumSquareRound List";
+  src: url("assets/font/NanumFontSetup_OTF_SQUARE_ROUND/NanumSquareRoundOTFB.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+}
+
+/* 폰트가 아예 실리지 않았을 때도 글자가 같은 자리에 오도록, 시스템 대체 폰트에도
+   같은 메트릭을 씌운 패밀리를 만들어 Sofia 바로 뒤에 세운다. */
+@font-face {
+  font-family: "Round Fallback";
+  src: local("Arial"), local("Helvetica Neue"), local("Helvetica"), local("Segoe UI"), local("Noto Sans KR");
+  ascent-override: 75%;
+  descent-override: 25%;
+  line-gap-override: 0%;
+  font-display: swap;
+  /*
+   * 라틴 글자만 맡는다. 앞의 시스템 글꼴이 모두 없는 기기에서는 마지막 local("Noto Sans KR") 이 잡히는데,
+   * 그러면 영문 스택 안의 한글이 나눔스퀘어라운드 앞에서 Noto 로 그려진다(사장님 지시 "한글 표기는 전부" 위반).
+   */
+  unicode-range: U+0000-024F, U+1E00-1EFF, U+2000-206F, U+20A0-20CF, U+2100-218F, U+2190-21FF;
+}
+
+:root {
+  --stage-scale: 1;
+  /* Sofia Pro Soft: upm 1000, ascent 750, descent 250, capHeight 694.
+     line-height 1에서 캡 중심이 상자 중심보다 0.097em 위에 놓인다(형제와 같은 값). */
+  --cap-nudge: 0.097em;
+  --ink-board: #3c2a17;
+  --ink-deep: #2b4a12;
+  --gold: #ffd93d;
+  --grass: #7bb03f;
+  --grass-deep: #46701f;
+  /* 형제 워드매치 방(카드·OX퀴즈·바다속·레이싱) 공통 연두. 고른 팻말 표시에 쓴다. */
+  --lime: #c7ff3f;
+  /*
+   * 한글은 나눔스퀘어라운드가 먼저다(위 @font-face). 시스템 글꼴은 받지 못했을 때의 대체로 뒤에 남긴다.
+   * 영문 스택은 영어 글꼴(Sofia · Lexend)이 앞이라 영어 표기는 그대로이고, 그 글꼴들에 없는 한글만
+   * Arial 다음의 나눔스퀘어라운드로 넘어간다 — Arial 에도 한글이 없기 때문이다.
+   */
+  --korean-stack: "NanumSquareRound Game", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  /* 형제 방의 --latin-stack과 같은 순서에 한글 대체 자리만 나눔스퀘어라운드를 앞세웠다. */
+  --latin-stack: "Sofia Pro Soft", "Lexend Game", "Round Fallback", Arial, "NanumSquareRound Game", "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/*
+ * 화면과 팝업에 display:flex / display:grid 를 적지 않을 수 없다. 그 선언은
+ * hidden 속성의 기본 display:none 보다 강해서, 이 규칙으로 막지 않으면 숨긴
+ * 요소가 배경만 남아 화면에 뜬다.
+ */
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #16240c;
+  overflow: hidden;
+  font-family: var(--latin-stack);
+  -webkit-text-size-adjust: 100%;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/*
+ * 무대 바깥(레터박스) 여백. 형제처럼 위쪽에서 번지는 빛무리를 깔고 무대에
+ * 그림자를 준다 — 단색으로 두면 검은 띠가 잘린 것처럼 어색하다. 이 게임은
+ * 바깥 풍경이라 하늘색과 풀색을 섞었다.
+ */
+.stage-frame {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 50% 22%, rgb(126 191 235 / 30%), transparent 46%),
+    #2a3d19;
+}
+
+.game-stage {
+  position: relative;
+  width: 1920px;
+  height: 1080px;
+  flex: none;
+  transform: scale(var(--stage-scale));
+  transform-origin: center center;
+  background: #8fc4e8;
+  box-shadow: 0 0 77px rgb(12 30 6 / 55%);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+}
+
+/* ---------- 공용 버튼 ---------- */
+
+/*
+ * 배치는 형제 방들과 같다. 사운드는 왼쪽 상단, 닫기·뒤로가기는 오른쪽 상단,
+ * 도움말은 오른쪽 하단. 가장자리에서 33px.
+ */
+.status-toast {
+  position: absolute;
+  top: 146px;
+  left: 50%;
+  z-index: 70;
+  margin: 0;
+  padding: 12px 31px;
+  border-radius: 999px;
+  color: #ffffff;
+  background: rgb(35 58 18 / 88%);
+  box-shadow: 0 6px 17px rgb(14 32 6 / 38%);
+  font-family: var(--korean-stack);
+  font-size: 21px;
+  font-weight: 800;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -10px);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.status-toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* 시작 화면에서는 로고를 가리지 않도록 Ranking 버튼 아래로 내린다. */
+.game-stage.screen-start .status-toast {
+  top: 1002px;
+}
+
+/*
+ * 코너 버튼은 도움말 화면(z-index 70)보다 앞에 서야 한다. 도움말은 팝업이
+ * 아니라 화면이라 자기 닫기 버튼이 없고, 오른쪽 위 화살표가 "도움말 닫기"가
+ * 되기 때문이다. 뒤에 두면 도움말을 열었을 때 닫을 방법이 Esc 밖에 남지 않는다.
+ * 로딩(80)과 랭킹(90)보다는 뒤 — 그 둘이 뜰 때는 코너 버튼을 아예 감춘다.
+ */
+.stage-tools {
+  position: absolute;
+  inset: 0;
+  z-index: 75;
+  pointer-events: none;
+}
+
+.global-control {
+  position: absolute;
+  width: 66px;
+  height: 69px;
+  padding: 0;
+  border: 0;
+  background: transparent no-repeat center / contain;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: filter 140ms ease, transform 140ms ease;
+}
+
+.global-control:hover,
+.global-control:focus-visible {
+  outline: none;
+  filter: brightness(1.08) drop-shadow(0 0 8px rgb(255 255 255 / 55%));
+  transform: scale(1.06);
+}
+
+.global-control:active {
+  transform: scale(0.95);
+}
+
+.global-control:disabled {
+  cursor: default;
+  filter: grayscale(0.5);
+  opacity: 0.55;
+}
+
+.sound-button {
+  top: 33px;
+  left: 33px;
+}
+
+.sound-button.is-on {
+  background-image: url("assets/public/btn_sound_on.png");
+}
+
+.sound-button:not(.is-on) {
+  background-image: url("assets/public/btn_sound_off.png");
+}
+
+/*
+ * 검수 r12: 화살표(btn_back.png)가 "앞으로 가기"로 읽혀 **모든 화면에서 X**로
+ * 통일했다. 아이콘만 바꾸고 동작은 그대로다 — 시작 화면에서는 게임 닫기,
+ * 그 밖에서는 시작 화면으로 돌아가기이며 무엇을 하는지는 aria-label 이 밝힌다.
+ * `assets/public/btn_back.png` 는 이제 참조하지 않지만 되돌릴 수 있게 남겨 둔다.
+ */
+.navigation-button {
+  top: 33px;
+  right: 33px;
+  background-image: url("assets/public/btn_close.png");
+}
+
+/*
+ * 2차 수정 1번(공통 문서 1절 "도움말 버튼", OX 와 같다): 도움말 화면에서만 X 대신 뒤로가기(←)를
+ * 스피커 자리(왼쪽 위)에 둔다. 스피커는 script.js syncNavigation 이 숨긴다. 시작 · 게임 화면은 그대로 X 다.
+ * r12 에서 화살표가 "앞으로 가기"로 읽혔던 것은 모든 화면의 X 를 두고 한 말이라, 도움말 한 화면에만 되살린다.
+ */
+.game-stage.help-mode .navigation-button {
+  right: auto;
+  left: 33px;
+  background-image: url("assets/public/btn_back.png");
+}
+
+.help-button {
+  right: 33px;
+  bottom: 34px;
+  width: 62px;
+  height: 63px;
+  background-image: url("assets/public/btn_help.png");
+}
+
+/* ---------- 시작 화면 ---------- */
+
+.start-screen {
+  overflow: hidden;
+}
+
+.start-background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+/*
+ * 시작 화면 배치. 시안에서 잰 값이고 로고·여우 모두 원본 크기 그대로 놓는다.
+ *
+ *   로고     815x815 캔버스, 실제 그림은 x 38..799 / y 173..617 (762x445).
+ *            그림 중심이 무대 (960, 441) 에 오도록 요소를 (541, 46) 에 둔다.
+ *   여우 셋  원본 크기. 로고 뒤에서 고개만 내민다.
+ *   메뉴     Start·Ranking 세로 2단, 사이 18.
+ */
+/*
+ * 공통-9(동화 정보): 로고와 Start 사이에 동화 정보 자리를 내려고 로고 · 여우 덩어리를 한꺼번에 0.86배로 줄였다.
+ * 기준점은 덩어리 맨 위(왼쪽 여우 머리 y 18) · 가로 가운데라 여우는 제자리에서 작아지고 로고 아래끝만 올라간다.
+ *   로고 보이는 아래끝  663 → 573      동화 정보  600..730(높이 130 = 무대의 12.0%)      Start  753(공통 기준 그대로)
+ *   틈  로고 → 동화 27(2.5%) · 동화 → Start 23(2.1%)
+ * 메뉴(Start 753 · 간격 34)는 12개 방 공통 기준(OX)으로 맞춘 자리라 옮기지 않았다. 덩어리 안의 자리 · 크기(아래 주석의
+ * 시안 실측)는 그대로라 오른쪽 여우 꼬리가 로고 뒤로 숨는 관계도 그대로다. OX 는 0.84배였다(방마다 그림이 달라 이 방에서 정함).
+ */
+.start-hero {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  transform: scale(0.86);
+  transform-origin: 960px 18px;
+}
+
+/*
+ * 동화 정보(공통-9). 자리는 위 .start-hero 주석. 배경 상자는 두지 않고(투명 — 사장님이 OX 방에서 "동화 박스 배경 투명하게 하고
+ * 글자는 잘 보이게") 흰 글자에 이 방 도움말과 같은 남색(#0a2a6b) 테두리를 둔다. 폭은 OX 와 같은 1375(글자 범위 1279)이고
+ * 가로 가운데는 메뉴와 같다. 길면 script.js fitStartStory 가 두 줄을 같은 배율로 줄인다.
+ */
+.start-story {
+  position: absolute;
+  top: 600px;
+  left: 50.104167%;
+  z-index: 3;
+  display: flex;
+  width: 1375px;
+  height: 130px;
+  padding: 0 48px;
+  transform: translateX(-50%);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-family: var(--latin-stack);
+  font-size: calc(40px * var(--start-story-scale, 1));
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  text-shadow: 0 0.06em 0.05em rgb(6 29 79 / 45%);
+  -webkit-text-stroke: 0.12em rgb(10 42 107 / 92%);
+  paint-order: stroke fill;
+  pointer-events: none;
+}
+
+.start-story[hidden],
+.start-story p[hidden] {
+  display: none;
+}
+
+.start-story p {
+  max-width: 100%;
+  margin: 0;
+  /* 글자 테두리가 줄 양끝에서 잘리지 않게 테두리 폭만큼 띄운다. */
+  padding: 0 0.12em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.start-logo {
+  position: absolute;
+  top: 46px;
+  left: 541px;
+  z-index: 2;
+  width: 815px;
+  height: 815px;
+  margin: 0;
+}
+
+.start-logo img {
+  display: block;
+  width: 815px;
+  height: 815px;
+  object-fit: contain;
+}
+
+.start-foxes {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+/*
+ * 여우는 로고 뒤에서 나왔다 없어졌다를 되풀이한다 — 게임 화면의 두더지와 같은
+ * 느낌이다. 셋의 주기와 시작 시각을 다르게 두어 한꺼번에 움직이지 않게 한다.
+ *
+ * 되풀이 애니메이션에는 fill-mode 를 쓰지 않고 0% 를 "보이는" 상태로 잡는다.
+ * 애니메이션이 돌지 않는 환경(백그라운드 탭, 절전, 모션 줄이기)에서 여우가
+ * 사라진 채로 굳지 않게 하려는 것이다 — 판 등장에서 이미 한 번 겪은 함정이다.
+ */
+.start-fox {
+  position: absolute;
+  display: block;
+  /*
+   * 숨는 자리. 기본값은 곧게 아래로 — 왼쪽·가운데 여우가 쓰는 원래 움직임이다.
+   * 오른쪽 여우만 아래에서 이 값을 대각선으로 덮어쓴다(사용자 지시).
+   */
+  --peek-hide-x: 0px;
+  --peek-hide-y: 54px;
+  --enter-hide-x: 0px;
+  --enter-hide-y: 96px;
+  animation: foxPeek var(--peek-cycle, 6s) ease-in-out var(--peek-delay, 0s) infinite;
+}
+
+@keyframes foxPeek {
+  0%,
+  40% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+
+  50%,
+  74% {
+    opacity: 0;
+    transform: translate(var(--peek-hide-x), var(--peek-hide-y)) scale(0.92);
+  }
+
+  84%,
+  100% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+.fox-left {
+  top: 18px;
+  left: 518px;
+  width: 307px;
+  height: 318px;
+  --peek-cycle: 3.8s;
+  --peek-delay: 0.3s;
+}
+
+.fox-center {
+  top: 76px;
+  left: 948px;
+  width: 239px;
+  height: 255px;
+  --peek-cycle: 4.8s;
+  --peek-delay: 1.5s;
+}
+
+/*
+ * 오른쪽 여우는 꼬리가 로고 뒤로 완전히 들어가야 한다. 꼬리는 에셋 x 31..110
+ * 자리이고, 그 높이에서 로고의 오른쪽 끝이 어디까지 나오는지에 따라 노출이
+ * 갈린다. 로고 알파와 여우 알파를 겹쳐 재어 고른 값이다:
+ *
+ *   (1246, 173)  꼬리 대부분 노출 — 처음 값
+ *   (1136, 173)  노출 6px
+ *   (1156, 173)  노출 272px — 오른쪽으로 20px 낸 만큼 꼬리가 다시 나온다
+ *   (1156, 145)  노출 5px, 머리 100% 노출  ← 지금 값
+ *
+ * 사용자 지시대로 오른쪽으로 20px 더 내면서 꼬리를 감추려면 28px 위로 올려야
+ * 한다. 로고 그림을 바꾸면 이 값을 다시 재야 한다.
+ */
+.fox-right {
+  top: 145px;
+  left: 1156px;
+  width: 326px;
+  height: 338px;
+  --peek-cycle: 5.4s;
+  --peek-delay: 2.4s;
+  /*
+   * 이 여우만 대각선으로 오간다(사용자 지시) — 나타날 때 오른쪽 위로 올라오고,
+   * 사라질 때 왼쪽 아래로 물러난다. 로고 오른쪽에서 나왔다 로고 뒤로 숨는
+   * 방향이라 다른 둘(곧게 아래)과 달라야 자연스럽다.
+   */
+  --peek-hide-x: -52px;
+  --peek-hide-y: 58px;
+  --enter-hide-x: -78px;
+  --enter-hide-y: 87px;
+}
+
+/* ---- 첫 진입 연출 ---- */
+
+/*
+ * 처음 한 번만 로고가 팝인하고 여우가 차례로 솟는다. 게임에서 돌아올 때는
+ * 재생하지 않는다. 등장 애니메이션이 되풀이 애니메이션을 잠시 밀어내고,
+ * 끝나면 script.js 가 클래스를 떼어 되풀이가 이어받는다.
+ */
+.start-logo.logo-enter {
+  animation: logoPop 900ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes logoPop {
+  from {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.start-fox.fox-enter {
+  animation: foxRise 760ms cubic-bezier(0.34, 1.56, 0.64, 1) var(--enter-delay, 0s) both;
+}
+
+/* 첫 등장은 되풀이 연출과 같은 축을 더 길게 쓴다. */
+@keyframes foxRise {
+  from {
+    opacity: 0;
+    transform: translate(var(--enter-hide-x), var(--enter-hide-y)) scale(0.86);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+.fox-left.fox-enter { --enter-delay: 0.30s; }
+.fox-center.fox-enter { --enter-delay: 0.46s; }
+.fox-right.fox-enter { --enter-delay: 0.62s; }
+
+/*
+ * 시작 화면 Start · Ranking — 기준 방은 OX 퀴즈다(사장님 지시 2026-09-29 · 검수 4차).
+ * 기준 방은 cqw(무대 폭의 1%) 를 쓰고 이 방은 px 이라 1cqw = 19.2px 로 환산했다.
+ * 버튼 id 와 그림 두 장은 이미 기준과 같으므로 건드리지 않는다(sha256 대조).
+ */
+.start-menu {
+  position: absolute;
+  top: 753px;
+  left: 50.104167%;
+  z-index: 5;
+  display: flex;
+  width: 348px;
+  flex-direction: column;
+  gap: 34px;
+  transform: translateX(-50%);
+  animation: startMenuEnter 520ms 360ms ease-out both;
+}
+
+.start-menu-button {
+  position: relative;
+  width: 100%;
+  height: 114px;
+  padding: 0;
+  border: 0;
+  border-radius: 40px;
+  background: transparent no-repeat center / contain;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: filter 130ms ease, transform 130ms ease;
+}
+
+/* 글자는 그림에 들어 있다. span 은 스크린리더용이라 화면에서 감춘다. */
+.start-menu-button > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.start-menu-button-play {
+  background-image: url("assets/start/btn_start.png");
+}
+
+.start-menu-button-ranking {
+  background-image: url("assets/start/btn_ranking.png");
+}
+
+.start-menu-button:hover:not(:disabled),
+.start-menu-button:focus-visible:not(:disabled) {
+  filter: brightness(1.07);
+  transform: translateY(-4.032px) scale(1.02);
+}
+
+.start-menu-button:focus-visible:not(:disabled) {
+  outline: 4.992px solid rgb(255 255 255 / 52%);
+  outline-offset: 3.456px;
+}
+
+.start-menu-button:active:not(:disabled),
+.start-menu-button.is-pressed:not(:disabled) {
+  filter: brightness(0.97);
+  transform: translateY(4.032px) scale(0.99);
+}
+
+.start-menu-button:disabled {
+  cursor: default;
+  filter: grayscale(0.35);
+  opacity: 0.62;
+}
+
+/*
+ * 유리 광택. 버튼 PNG의 알파를 그대로 마스크로 써서 알약 모양에 정확히
+ * 맞물린다. Ranking은 1.1s 늦게 시작해 두 버튼이 함께 번쩍이지 않는다.
+ * background-size가 300%라 왼→오 스윕은 값이 줄어드는 방향이다.
+ */
+.start-menu-button:not(:disabled)::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 38%,
+    rgb(255 255 255 / 62%) 50%,
+    transparent 62%
+  ) no-repeat;
+  background-size: 300% 100%;
+  animation: startButtonShine 4200ms linear infinite;
+  content: "";
+  pointer-events: none;
+  -webkit-mask: var(--sheen-mask) no-repeat center / contain;
+  mask: var(--sheen-mask) no-repeat center / contain;
+}
+
+.start-menu-button-play:not(:disabled)::after {
+  --sheen-mask: url("assets/start/btn_start.png");
+}
+
+.start-menu-button-ranking:not(:disabled)::after {
+  --sheen-mask: url("assets/start/btn_ranking.png");
+  animation-delay: 1100ms;
+}
+
+@keyframes startButtonShine {
+  0% {
+    background-position: 160% 0;
+  }
+
+  100% {
+    background-position: -60% 0;
+  }
+}
+
+@keyframes startMenuEnter {
+  from {
+    opacity: 0;
+    filter: blur(3.072px);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+
+/* ---------- 게임 화면 ---------- */
+
+.play-background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.board-field {
+  position: absolute;
+  inset: 0 0 200px;
+  z-index: 1;
+}
+
+/*
+ * 판 한 장. 여덟 자리에 하나씩 놓이고, 자리 좌표는 --slot-x/--slot-y로 준다.
+ *
+ * 보이고 숨는 것은 hidden 속성이 정하고, 이 규칙의 기본값은 "이미 올라와 있는"
+ * 상태다. 처음에는 기본값을 opacity 0 으로 두고 클래스를 붙여 transition 으로
+ * 올렸는데, 화면을 그리지 않는 상황에서는 전환이 진행되지 않아 판이 영영
+ * 투명하게 남았다. 등장·퇴장을 keyframes 로 옮기면 애니메이션이 돌지 않더라도
+ * 판은 제자리에 그대로 보인다.
+ */
+.board {
+  position: absolute;
+  top: var(--slot-y);
+  left: var(--slot-x);
+  width: 544px;
+  height: 344px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  opacity: 1;
+  transform: translateY(0);
+  touch-action: manipulation;
+  /* 판 그림 한 장(544×344)은 누름을 받지 않는다. 받는 곳은 아래 .board-hit 뿐이다. */
+  pointer-events: none;
+  /*
+   * 고르는 순간의 변화에는 전환을 걸지 않는다(검수 r39). 손가락 반응은 즉시가
+   * 낫고, 전환이 진행되지 않는 상황에서는 확대가 아예 적용되지 않은 채로
+   * 남는다 — 실제로 측정에서 transform 이 항등행렬로 굳는 것을 확인했다.
+   */
+}
+
+/* 아래 줄일수록 앞에 온다 — 여우 머리가 윗줄 판을 가리지 않게. */
+.board[data-row="0"] { z-index: 1; }
+.board[data-row="1"] { z-index: 2; }
+.board[data-row="2"] { z-index: 3; }
+
+/*
+ * 누르는 영역(2026-09-15 사용자 지시 "터치 영역은 텍스트 박스 단위로만", 선택 B: 팻말 판 전체).
+ *
+ * 예전에는 판 그림 한 장을 통째로 눌렀다. 그림에는 여우와 투명한 여백까지 들어 있어 이웃 판과
+ * 12곳이 겹쳤고, 겹친 곳에서는 앞에 서는 아랫줄 판이 누름을 가로챘다 — 가운데 줄 팻말의 아래쪽
+ * 43px 을 누르면 아랫줄 판이 골라졌다. 이제는 팻말 판(나무 테두리 포함) 자리에 둔 이 투명한 칸만
+ * 누름을 받는다. 누름은 부모 버튼으로 올라가 script.js 의 위임 처리기가 그대로 받는다.
+ *
+ * 자리는 판 그림에서 불투명 폭이 넓은 줄(팻말 판)을 재서 얻었다. 뜻 판은 그림을 1.0303 배·x -4 로
+ * 옮겨 놓았으므로 옮긴 뒤 값이다. 고른 판이 1.08 배 커져도 이웃과 겹치지 않는다 — 가장 좁은
+ * 곳은 영어 판 둘이 나란하고 그중 하나를 골랐을 때로 약 10px 이다(tests/touch-area.test.mjs).
+ *   영어 판: x 40..512, y 188..313 (472×125)
+ *   뜻   판: x 51..501, y 187..314 (450×127)
+ */
+.board-hit {
+  position: absolute;
+  z-index: 2;
+  display: block;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.board-en .board-hit { top: 188px; left: 40px; width: 472px; height: 125px; }
+.board-ko .board-hit { top: 187px; left: 51px; width: 450px; height: 127px; }
+
+/*
+ * 사라지는 판·맞힌 판·꺼진 판은 누름 영역도 막는다. 이 칸에 pointer-events: auto 를 적어
+ * 두었으므로 부모 판의 none 만으로는 막히지 않는다.
+ */
+.board.is-leaving .board-hit,
+.board.is-matched .board-hit,
+.board:disabled .board-hit {
+  cursor: default;
+  pointer-events: none;
+}
+
+/*
+ * 담장 뒤에서 올라온다. 끝나면 script.js가 클래스를 떼어 평소 상태로 돌린다.
+ *
+ * 등장에서는 opacity 를 건드리지 않고 올라오는 이동만 그린다. fill-mode 로
+ * 첫 프레임을 붙잡아 두면 애니메이션이 돌지 않는 상황에서 판이 투명한 채로
+ * 남기 때문이다. 이동만 쓰면 최악의 경우에도 판은 조금 아래에 보일 뿐이다.
+ */
+.board.is-entering {
+  animation: boardRise 340ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes boardRise {
+  from {
+    transform: translateY(150px);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+/*
+ * 10초가 지나 판을 다시 깔 때 남은 팻말이 물러난다(검수 r38). 사용자 지시:
+ * 아래로 내려가지 않고 사라지기만 한다. 이동을 넣으면 담장 뒤로 빨려 들어가는
+ * 것처럼 보여 시안과 어긋난다.
+ */
+.board.is-leaving {
+  animation: boardFade 300ms ease both;
+  pointer-events: none;
+}
+
+@keyframes boardFade {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+.board:disabled {
+  cursor: default;
+}
+
+.board-art {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/*
+ * 두 판 그림의 팻말 크기가 서로 다르다. 544x344 캔버스 안에서 재면
+ *   영어 판: x 39..512 (473) , y 187..322 (136)
+ *   뜻   판: x 61..498 (437) , y 189..320 (132)
+ * 세로 중심은 둘 다 254.5로 같지만 높이가 4px 다르고 폭은 36px 다르다. 한 줄에
+ * 두 종류가 섞여 서면 팻말 크기가 눈에 띄게 달라 보인다. 뜻 판을 세로 중심을
+ * 축으로 136/132 배 키워 팻말 높이를 영어 판에 맞추고, 가로 중심 차이 4px 만큼
+ * 왼쪽으로 밀어 두 종류의 중심을 포갠다.
+ */
+.board-ko .board-art {
+  transform: translateX(-4px) scale(1.0303);
+  transform-origin: 279.5px 254.5px;
+}
+
+/*
+ * 판 안쪽 글자 상자.
+ *
+ * 판 그림에서 행·열별로 안쪽 면이 넓게 나타나는 구간을 재면
+ *   영어 x 76..474 (중앙 275), y 201..300 (중앙 250)
+ *   뜻   x 77..483 (중앙 280), y 200..302 (중앙 251)
+ * 이다. 처음에는 "밝은 픽셀" 만으로 재서 여우 가슴의 흰 털까지 안쪽 면으로
+ * 세는 바람에 세로 중앙이 227로 23px 높게 잡혔고, 글자가 판 위쪽에 붙었다.
+ * 아래 값은 위 구간의 한가운데(250)에 상자 중심을 맞춘 것이다.
+ */
+.board-text {
+  position: absolute;
+  top: 192px;
+  z-index: 1;
+  display: flex;
+  height: 116px;
+  align-items: center;
+  justify-content: center;
+  /*
+   * 안쪽 여백. 없으면 긴 뜻이 나무 테두리와 발자국에 닿는다. 아래 left/width
+   * 는 판 안쪽 면에 맞춘 값이고, 글자가 실제로 놓이는 폭은 여기서 좌우 여백을
+   * 뺀 만큼이다.
+   */
+  padding: 4px 16px;
+  margin: 0;
+  overflow: hidden;
+  line-height: 1.16;
+  text-align: center;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+
+/*
+ * 글자를 담는 상자. 넘쳤는지는 이 요소의 크기로 잰다(script.js fitBoardText).
+ */
+.board-text-inner {
+  display: block;
+  width: 100%;
+}
+
+.board-en .board-text {
+  left: 76px;
+  width: 399px;
+  padding-top: var(--cap-nudge);
+  color: var(--ink-board);
+  font-family: var(--latin-stack);
+  font-size: calc(52px * var(--board-text-scale, 1));
+  font-weight: 700;
+  /*
+   * 영어는 한 줄이 기본이다(2차 수정 — 공통 문서 1절 두 줄 규칙). 글자 중간이나 `-` 뒤에서 갈리지 않게
+   * overflow-wrap 을 되돌리고, 나눌 때는 script.js 가 .is-wrapped 를 붙여 띄어쓰기에서만 두 줄로 나눈다.
+   */
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+
+.board-en .board-text.is-wrapped {
+  white-space: normal;
+  text-wrap: balance;
+}
+
+/* 단어 하나는 줄바꿈 없는 칸이다 — `ice-cream` 이 `ice- / cream` 으로 갈리지 않는다. */
+.board-en .word-part {
+  white-space: nowrap;
+}
+
+/* 뜻 판은 안쪽 네 귀퉁이에 발자국이 찍혀 있어 좌우로 조금 더 들인다. */
+.board-ko .board-text {
+  left: 97px;
+  width: 367px;
+  color: var(--ink-board);
+  font-family: var(--korean-stack);
+  /* 최대 36px(예전 40px) — 크기를 고르는 규칙과 근거는 script.js fitKoreanBoardText. */
+  font-size: calc(36px * var(--board-text-scale, 1));
+  font-weight: 800;
+  /*
+   * 한글은 띄어쓰기 자리에서만 줄을 바꾼다(사장님 답 2026-10-02 "두더지만 띄어쓰기에서" — 부모 원장 75da3d781519e9cc,
+   * 이 방만의 결정). 예전에는 글자 사이 어디서나 바꿔 "종교적으 / 로" 처럼 낱말이 갈렸다(뜻 320개 중 115개).
+   * 띄어쓰기 없이 칸보다 긴 덩어리는 넘치게 두고(overflow-wrap: normal) script.js 가 먼저 더 줄인다. 바닥(12px)까지
+   * 줄여도 안 들어갈 때만 .is-broken 을 붙여 그 덩어리 안에서 끊는다 — 칸 밖으로 넘치지는 않는다.
+   */
+  word-break: keep-all;
+  overflow-wrap: normal;
+  /* 줄 길이를 고르게 — 마지막 줄에 한두 글자만 남지 않게(실데이터에서 27개 → 0개). */
+  text-wrap: balance;
+}
+
+.board-ko .board-text.is-broken {
+  overflow-wrap: anywhere;
+}
+
+/*
+ * 고른 판(검수 r39). 예전에는 확대 1.03 배와 뒤쪽 노란 빛무리뿐이었는데,
+ * "커지는 효과가 잘 보이지 않고 야광 효과도 특히 모바일에서 눈에 안 띈다"는
+ * 지적을 받았다. 이제 세 가지가 한꺼번에 걸린다.
+ *
+ *   1. 확대를 1.03 → 1.08 로 키우고 더 들어 올린다
+ *   2. 팻말 **테두리**를 연두 실선으로 두른다 — 흐림 0 인 drop-shadow 를 네
+ *      방향으로 겹치면 PNG 알파 모양을 그대로 따라가는 윤곽선이 된다
+ *   3. **팻말 판**을 연두로 물들인다(.board-tint)
+ *
+ * 색은 처음에 주황이었다. "선택 된 생상이 붉은을 쓰면 경고성으로 보이기 때문에 연두색 같은
+ * 밝은 계열로 사용"(2026-09-15 사용자 지시)에 따라 형제 방 공통 연두(--lime)로 바꿨다.
+ * 물들이기는 팻말 판에만 건다(사용자 선택 B) — 판 그림 전체를 물들이면 여우가 초록빛이 된다.
+ *
+ * 빛무리는 배경이 밝을 때 묻히므로 더는 기대지 않는다.
+ */
+/*
+ * 2차 수정 6번 "한글 정답 선택 영역 클릭할 때 하얀 테두리 제거": 고른 팻말 둘레에 그려지는 것은
+ * 위 2번의 연두 실선 하나뿐이다 — 판 그림에 건 4px drop-shadow 네 겹(#c7ff3f). 흰색 요소 · 포커스 링 ·
+ * ::before/::after 는 없다(실제 화면에서 계산값으로 확인). 아주 밝은 연두라 화면에서 하얗게 보였다.
+ * 그 윤곽선만 뺐다. 3번 물들임(.board-tint)과 확대(1.08)는 그대로다.
+ */
+.board.is-picked .board-art {
+  filter: saturate(1.25);
+}
+
+.board.is-picked {
+  transform: translateY(-16px) scale(1.08);
+}
+
+/*
+ * 팻말을 물들이는 층. 판 그림을 마스크로 써서 팻말 모양 밖으로 새지 않고, clip-path 로
+ * 팻말 판 자리만 남겨 여우는 물들이지 않는다(자리는 누르는 영역 .board-hit 과 같은 실측).
+ * 전환을 걸지 않는다 — 전환이 진행되지 않는 상황에서 물듦이 영영 안 나타나는
+ * 것보다, 누른 즉시 딱 바뀌는 쪽이 손가락 반응으로도 더 낫다.
+ */
+.board-tint {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  background: var(--lime);
+  opacity: 0;
+  pointer-events: none;
+  -webkit-mask: var(--board-art) no-repeat center / contain;
+  mask: var(--board-art) no-repeat center / contain;
+}
+
+/* 영어 판: 팻말 판 x 40..512, y 188..313 만 물들인다. */
+.board-en .board-tint {
+  clip-path: inset(188px 32px 31px 40px);
+}
+
+/*
+ * 뜻 판은 그림을 키워 놓았으니 물듦도 같은 만큼 따라가야 한다. clip-path 는 변형 전 좌표라
+ * 원래 그림의 팻말 판(x 62..498, y 189..312)으로 자르고, 변형 뒤에는 누르는 영역
+ * (x 51..501, y 187..314)과 1px 안으로 맞는다.
+ */
+.board-ko .board-tint {
+  transform: translateX(-4px) scale(1.0303);
+  transform-origin: 279.5px 254.5px;
+  clip-path: inset(189px 46px 32px 62px);
+}
+
+.board.is-picked .board-tint {
+  opacity: 0.42;
+}
+
+/* 짝을 맞혔을 때 — 반짝 뜨고 사라진다. */
+.board.is-matched .board-art {
+  filter: drop-shadow(0 0 18px rgb(160 255 120 / 95%));
+}
+
+/* 맞힌 판도 내려가지 않는다 — 살짝 커지며 사라지기만 한다(사용자 지시). */
+.board.is-matched {
+  animation: boardClear 300ms ease both;
+  pointer-events: none;
+}
+
+@keyframes boardClear {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(1.06);
+  }
+}
+
+/*
+ * WM6-2: 두 팻말 모두 하이라이트(is-picked — 확대 · 연두 물들임)를 보인 뒤 사라진다. 사라지는 동안에도
+ * 골라진 모습(들어 올림 · 1.08배 · 물들임)에서 시작해야 사라지기 직전에 하이라이트가 툭 꺼지지 않는다.
+ */
+.board.is-picked.is-matched {
+  animation-name: boardClearPicked;
+}
+
+@keyframes boardClearPicked {
+  from {
+    opacity: 1;
+    transform: translateY(-16px) scale(1.08);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-16px) scale(1.14);
+  }
+}
+
+/* 짝이 아닐 때 — 좌우로 흔든다. */
+.board.is-wrong {
+  animation: boardShake 420ms ease;
+}
+
+@keyframes boardShake {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  15% { transform: translateY(0) translateX(-16px); }
+  32% { transform: translateY(0) translateX(14px); }
+  50% { transform: translateY(0) translateX(-11px); }
+  68% { transform: translateY(0) translateX(8px); }
+  85% { transform: translateY(0) translateX(-4px); }
+}
+
+.board:not(:disabled):hover .board-art,
+.board:not(:disabled):focus-visible .board-art {
+  filter: brightness(1.06);
+}
+
+.board:focus-visible {
+  outline: none;
+}
+
+/* ---------- 하단 바 ---------- */
+
+.play-hud {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 5;
+  height: 200px;
+}
+
+.hud-background {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Score 상자 (94,910 / 336x149). 세로는 시안 그대로, 가로는 바깥 여백 94 — 아래 .hud-combo 주석. 시안은 140 이었다. */
+.hud-score {
+  position: absolute;
+  top: 30px;
+  left: 94px;
+  width: 336px;
+  height: 149px;
+}
+
+.hud-score-box {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/*
+ * 점수 숫자. "Score" 글자는 상자 그림에 이미 새겨져 있으므로 숫자만 얹는다.
+ * 시안에서 숫자는 y 981..1024 (무대 기준), 곧 상자 안쪽 71..114 자리다.
+ */
+.hud-score-value {
+  position: absolute;
+  top: 66px;
+  left: 0;
+  z-index: 1;
+  width: 100%;
+  margin: 0;
+  padding-top: var(--cap-nudge);
+  color: #ffffff;
+  font-family: var(--latin-stack);
+  font-size: 58px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: center;
+  text-shadow: 0 3px 0 rgb(35 62 14 / 55%);
+}
+
+/*
+ * 점수 증감 표시. 형제 워드매치 방들의 `.score-delta` 와 같은 역할이다 —
+ * 점수가 바뀌는 순간 Score 상자 **위로** 얼마가 오갔는지 띄웠다 지운다.
+ * 상자 안 숫자만 바뀌면 얼마가 올랐는지 눈으로 따라가기 어렵다.
+ *
+ * 자리는 **Score 상자 안**이다. 상자는 하단 바 안 (140,910)~(476,1059) 이고,
+ * 그 위쪽은 담장이라 아랫줄 팻말이 차지한다 — 바 밖으로 띄우면 팻말 글자와
+ * 겹치고 바 경계선에 잘려 보인다. 그래서 숫자 자리에서 시작해 상자 위쪽으로
+ * 떠오르며 사라지게 했다. 상자를 벗어나지 않으니 무엇이 오른 점수인지도 분명하다.
+ */
+.hud-score-delta {
+  position: absolute;
+  top: -26px;
+  left: 0;
+  z-index: 6;
+  width: 100%;
+  margin: 0;
+  color: #eafbc0;
+  font-family: var(--latin-stack);
+  font-size: 44px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: center;
+  text-shadow: 0 4px 0 rgb(30 52 12 / 72%);
+  opacity: 0;
+  pointer-events: none;
+  -webkit-text-stroke: 3px rgb(255 255 255 / 88%);
+}
+
+/*
+ * 애니메이션이 도는 동안에만 보인다. 기본이 opacity 0 이지만 이 표시는
+ * "잠깐 떴다 사라지는 것" 이라 애니메이션이 돌지 않는 상황에서 안 보이는 것이
+ * 맞는 결과다 — 판이나 안내처럼 계속 떠 있어야 하는 것과 다르다.
+ */
+.hud-score-delta.is-gain,
+.hud-score-delta.is-loss {
+  animation: scoreDeltaRise 900ms ease-out;
+}
+
+.hud-score-delta.is-gain {
+  color: #eafbc0;
+}
+
+.hud-score-delta.is-loss {
+  color: #ffc7c7;
+  -webkit-text-stroke: 3px rgb(120 24 24 / 55%);
+}
+
+/*
+ * 보너스 표기 "보너스 +100" 은 예전에 이 상자 윗부분에 띄웠다(.hud-score-delta.is-bonus). 2차 수정 10번
+ * ("보너스 UI 상단에 100점 노출, 현재는 스코어 버튼 위에 노출")으로 보너스 여우 위(.combo-bonus-gain)로
+ * 옮겨 이 규칙과 키프레임은 지웠다. 상자 링 · 숫자 펀치는 그대로 상자에서 돈다.
+ */
+
+/* 보너스 때 점수 숫자가 금색으로 번쩍 커졌다 돌아온다(형제 카드·바다속 방 scoreBonusPunch). */
+.hud-score-value.is-bonus-punch {
+  animation: scoreBonusPunch 620ms cubic-bezier(0.2, 0.9, 0.3, 1.35);
+}
+
+@keyframes scoreBonusPunch {
+  0% { transform: scale(1); }
+  42% { color: #ffe260; transform: scale(1.28); }
+  70% { transform: scale(0.96); }
+  100% { transform: scale(1); }
+}
+
+/*
+ * Score 상자 둘레 금빛 링·반짝임(형제 카드 방 .score-burst — 바다속 방 값을 무대 px 로
+ * 옮긴 것). 링과 반짝임은 커지면서 사라지므로, 감싼 상자 .hud-score-fx 가 하단 바
+ * 윗선(y 880 = 상자 위 30px)에서 잘라 아랫줄 팻말 위로 번지지 않게 한다. 좌우와
+ * 아래는 커진 반짝임이 잘리지 않을 만큼 넉넉히 둔다. 상자 그림 위, 점수 숫자 아래다.
+ */
+.hud-score-fx {
+  position: absolute;
+  inset: -30px -100px -100px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.hud-score-burst {
+  position: absolute;
+  top: 30px;
+  left: 100px;
+  width: 336px;
+  height: 149px;
+  border-radius: 23px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hud-score-burst.is-playing {
+  box-shadow:
+    0 0 0 5px #ffd84a,
+    0 0 27px 6px rgb(255 196 40 / 75%),
+    inset 0 0 23px rgb(255 220 90 / 45%);
+  animation: scoreBurstRing 900ms ease-out forwards;
+}
+
+.hud-score-burst::before,
+.hud-score-burst::after {
+  position: absolute;
+  inset: -34% -10%;
+  content: "";
+  opacity: 0;
+  background:
+    radial-gradient(circle, #fff 0 2.7px, rgb(255 226 96 / 90%) 3.8px, transparent 7.7px) 6% 18% / 25px 25px no-repeat,
+    radial-gradient(circle, #fff 0 2.3px, rgb(255 206 60 / 90%) 3.5px, transparent 6.9px) 94% 12% / 23px 23px no-repeat,
+    radial-gradient(circle, #fff 0 1.9px, rgb(255 226 96 / 85%) 3.1px, transparent 6.1px) 98% 80% / 21px 21px no-repeat,
+    radial-gradient(circle, #fff 0 2.3px, rgb(255 206 60 / 85%) 3.5px, transparent 6.5px) 2% 86% / 21px 21px no-repeat,
+    radial-gradient(circle, #fff 0 1.9px, rgb(255 236 140 / 85%) 2.9px, transparent 5.8px) 52% 0% / 19px 19px no-repeat;
+}
+
+.hud-score-burst::after {
+  inset: -22% -4%;
+  background:
+    radial-gradient(circle, #fff 0 1.7px, rgb(255 236 140 / 85%) 2.7px, transparent 5.4px) 22% 2% / 17px 17px no-repeat,
+    radial-gradient(circle, #fff 0 1.7px, rgb(255 214 74 / 85%) 2.7px, transparent 5.4px) 78% 4% / 17px 17px no-repeat,
+    radial-gradient(circle, #fff 0 1.5px, rgb(255 236 140 / 85%) 2.5px, transparent 5px) 100% 46% / 15px 15px no-repeat,
+    radial-gradient(circle, #fff 0 1.5px, rgb(255 214 74 / 85%) 2.5px, transparent 5px) 0% 50% / 15px 15px no-repeat;
+}
+
+.hud-score-burst.is-playing::before {
+  animation: scoreBurstSparkle 900ms ease-out forwards;
+}
+
+.hud-score-burst.is-playing::after {
+  animation: scoreBurstSparkle 900ms 120ms ease-out forwards;
+}
+
+@keyframes scoreBurstRing {
+  0% { opacity: 0; transform: scale(0.92); }
+  22% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.18); }
+}
+
+@keyframes scoreBurstSparkle {
+  0% { opacity: 0; transform: scale(0.6); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.28); }
+}
+
+/*
+ * 점수 숫자 자리(무대 y 약 982)에서 시작해 상자 위로 빠져나가며 사라진다.
+ * 끝자리는 y 884 — 상자 윗변(910)보다 위지만 초록 바(880~1080) 안이라
+ * 아랫줄 팻말과 겹치지 않는다. 숫자 위를 지나가는 동안 이미 옅어져 있어
+ * 상자 안 점수를 가리지 않는다.
+ */
+@keyframes scoreDeltaRise {
+  0% {
+    opacity: 0;
+    transform: translateY(98px) scale(0.86);
+  }
+
+  20% {
+    opacity: 1;
+    transform: translateY(80px) scale(1.08);
+  }
+
+  55% {
+    opacity: 0.92;
+    transform: translateY(46px) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(0) scale(0.96);
+  }
+}
+
+.hud-timer {
+  position: absolute;
+  inset: 0;
+}
+
+/*
+ * 스톱워치 그림 (524,928 / 132x111). 트랙의 왼쪽 둥근 끝(567)보다 왼쪽에서
+ * 시작해 바와 겹치므로, 바보다 앞에 세워야 시계가 채움 색에 잠기지 않는다.
+ * 자리는 아래 .hud-combo 주석(하단 바 여백) — Score 상자 오른쪽 끝(430)에서 94px.
+ */
+.hud-timer-icon {
+  position: absolute;
+  top: 48px;
+  left: 524px;
+  z-index: 2;
+  display: block;
+  width: 132px;
+  height: 111px;
+  pointer-events: none;
+}
+
+/*
+ * 트랙 (567,963 / 711x55). 세로는 시안과 오차 0. 가로는 하단 바 여백(아래 .hud-combo 주석)으로 정한 폭이라 그림
+ * 폭(713)과 다를 수 있다 — 그림을 가로로만 늘이거나 줄이면 양 끝 둥근 부분이 찌그러지므로 border-image 로 끝(28px)은
+ * 그대로 두고 가운데만 맞춘다. 그림의 둥근 끝은 x 0..25 · 688..713 이다.
+ */
+.hud-timer-bar {
+  position: absolute;
+  top: 83px;
+  left: 567px;
+  width: 711px;
+  height: 55px;
+}
+
+.hud-timer-track {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 711px;
+  height: 55px;
+  border-image: url("assets/game/ui_timer3.png") 0 28 fill / 0 28px stretch;
+  pointer-events: none;
+}
+
+/*
+ * 채움. 그림에 옅은 바깥 빛무리가 있어 트랙보다 크다(그림 750x99, 트랙 713 보다 37 넓음). 트랙 가운데에
+ * 맞추려면 왼쪽으로 19px, 위아래로 (99-55)/2 = 22px 씩 넘겨 놓아야 한다. 트랙이 711 이니 채움은
+ * 711 + 37 = 748 이다. 이 상자는 자리만 잡는다. 남은 시간은 script.js 가
+ * --timer-progress(0..1)로 넘겨 주고 아래 채움이 물려받는다.
+ */
+.hud-timer-clip {
+  position: absolute;
+  top: -22px;
+  left: -19px;
+  width: 748px;
+  height: 99px;
+}
+
+/*
+ * 줄이는 방식은 같은 채움 그림을 쓰는 형제 방(카드·OX퀴즈·바다속)과 같은
+ * clip-path 다(검수 r40). 예전에는 감싼 상자의 폭을 줄여 0.2초마다 막대를 다시
+ * 그렸다. clip-path 는 그려 둔 그림은 두고 보이는 범위만 바꾼다.
+ *
+ * 채움 그림(ui_timer2.png 750x99)도 트랙처럼 border-image 로 양 끝(빛무리 24 + 둥근 끝, 46px)은 그대로 두고
+ * 가운데만 맞춰 748 에 그린다(그림의 둥근 끝은 x 24..43 · 706..726). 그래서 실제 색 막대는 x 24..724 (700px)다.
+ * 오른쪽에서 깎는 양을 724 - 700 × 진행률로 잡아야 0%에서 막대가 모두 가려지고 100%에서 오른쪽
+ * 둥근 끝이 온전히 남는다. 전환은 걸지 않는다 — script.js 가 0.2초마다 소수째까지 다시 잰다.
+ * 지나간 이야기(지금 규칙 아님): 처음에는 그림 그대로 750 에 그리고 726 - 702 × 진행률로, 2026-10-15b 에는 656 에 그리고
+ * 632 - 608 × 진행률로 깎았다. 규칙으로 읽지 마십시오.
+ */
+.hud-timer-fill {
+  display: block;
+  width: 748px;
+  height: 99px;
+  border-image: url("assets/game/ui_timer2.png") 0 46 fill / 0 46px stretch;
+  pointer-events: none;
+  clip-path: inset(0 calc(724px - 700px * var(--timer-progress, 1)) 0 0);
+  will-change: clip-path;
+}
+
+/* 남은 시간 글자. 시안에서 x 1186..1271, y 926..949 — 오른쪽 끝을 트랙 끝(1278)에 맞춘다. */
+.hud-timer-clock {
+  position: absolute;
+  top: 40px;
+  left: 1078px;
+  width: 200px;
+  margin: 0;
+  padding-top: var(--cap-nudge);
+  color: #ffffff;
+  font-family: var(--latin-stack);
+  font-size: 32px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: right;
+  text-shadow: 0 2px 0 rgb(35 62 14 / 45%);
+}
+
+/*
+ * 남은 시간 경고(2차 수정 8번, 공통 문서 2절 — 바다속 방과 같다). 남은 10초부터 숫자 · 타임바가
+ * 빨강으로 깜박이고(1초), 5초부터는 더 빠르게(0.5초). 화면 가장자리 붉은 빛은 넣지 않는다.
+ * 예전에는 15초부터 노랑이었다.
+ * ⚠ 동작 줄이기에서는 깜박임이 꺼진다. 그래서 빨강은 애니메이션이 아니라 color · filter 같은
+ *   평소 규칙이 지킨다 — 그 규칙을 빼면 안 된다.
+ */
+.hud-timer.is-urgent .hud-timer-clock,
+.hud-timer.is-critical .hud-timer-clock {
+  color: #ff4757;
+  text-shadow:
+    0 0 11px rgb(255 60 80 / 85%),
+    0 3px 2px rgb(60 0 10 / 55%);
+}
+
+.hud-timer.is-urgent .hud-timer-clock {
+  animation: clockPulse 1s ease-in-out infinite;
+}
+
+.hud-timer.is-critical .hud-timer-clock {
+  animation: clockPulse 500ms ease-in-out infinite;
+}
+
+@keyframes clockPulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* 채움 그림은 초록 → 하늘 그러데이션이라 색상만 돌리면 여러 색이 된다. index.html 의 #timer-fill-red 색 행렬로 빨강 하나로 모은다. */
+.hud-timer.is-urgent .hud-timer-fill,
+.hud-timer.is-critical .hud-timer-fill {
+  filter: url(#timer-fill-red);
+}
+
+.hud-timer.is-urgent .hud-timer-fill {
+  animation: timerFillBlink 1s steps(1, end) infinite;
+}
+
+.hud-timer.is-critical .hud-timer-fill {
+  animation: timerFillBlink 500ms steps(1, end) infinite;
+}
+
+@keyframes timerFillBlink {
+  0% { opacity: 1; }
+  50% { opacity: 0.45; }
+  100% { opacity: 1; }
+}
+
+.svg-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/*
+ * 남은 시간이 얼마 없으면 스톱워치도 급하게 움직인다. 숫자만 깜빡이면 화면
+ * 아래쪽을 보고 있지 않는 한 눈에 띄지 않는다. 초침이 떨리듯 좌우로 흔들고
+ * 살짝 커졌다 작아지게 해서 곁눈으로도 보이게 한다.
+ */
+.hud-timer.is-urgent .hud-timer-icon,
+.hud-timer.is-critical .hud-timer-icon {
+  animation: stopwatchRush 420ms ease-in-out infinite;
+  transform-origin: 66px 74px;
+}
+
+.hud-timer.is-critical .hud-timer-icon {
+  animation-duration: 260ms;
+}
+
+@keyframes stopwatchRush {
+  0%,
+  100% {
+    transform: rotate(-9deg) scale(1.06);
+  }
+
+  50% {
+    transform: rotate(9deg) scale(1.12);
+  }
+}
+
+/*
+ * 콤보 여우. 크기는 시안 그대로 — 앞의 둘 119x142, 보너스 여우 143x177. 아직 차지 않은 칸은 흐리게 둔다.
+ *
+ * 하단 바 간격(공통-5 — 검수 No.30 "스코어, 타임, 보너스 간격이 일정하지 않음", 사장님 2026-10-12 "OX퀴즈에 적용해두었어 …
+ * 배치 방식을 … 각 방에 맞게 비율을 맞춰서"). OX 의 배치 방식 두 가지 — ① 보이는 Score 상자의 왼쪽 여백 = 보이는 마지막
+ * 보너스의 오른쪽 여백 ② 보너스 셋은 보이는 부분 기준 같은 간격 — 를 이 방 그림에 맞췄다. 그림 안 여백이 달라(앞의 둘
+ * 잉크 x 4..116, 보너스 x 3..139, 스톱워치 0..131, 알파 > 24) 상자 간격이 아니라 **보이는 잉크 사이**로 잰다.
+ *
+ * 여백(사장님 2026-10-15, 관리방 전달): ① "타임 라인에 좌우 붙어있는 Score박스,콤보 등 여백이 좁아 보여 모두 비율에 맞게"로
+ * Score 상자 ↔ 시계 와 막대 ↔ 첫 보너스를 47 → 94 로 넓혔고, ② 이어서 "붉은 색으로 표시한 부분 넓다는 지적"(Score 왼쪽 ·
+ * 마지막 보너스 오른쪽 바깥 여백)으로 바깥 여백을 140 → 94 로 줄여 묶음 사이와 같게 두었다. 줄어든 92 는 시간 막대에 돌려
+ * 막대가 619 → 711 로 그림(713)에 거의 가까워졌다. 보너스 사이 47 : 나머지 사이 94 = 1 : 2. 그림 크기는 그대로다.
+ *   왼쪽 여백 94 · Score 94..430 · 94 · 타이머 524..1278 · 94 · 여우 1372..1484 · 47 · 1531..1643 · 47 · 1690..1826 · 오른쪽 여백 94
+ * 지나간 이야기(지금 규칙 아님): 2026-10-15b 는 바깥 140 · 묶음 사이 94 · 막대 619, 2026-10-15a 는 모든 사이 47 · 바깥 140,
+ * 그 전(검수 서버 판)은 스코어 → 타이머 58 · 타이머 → 보너스 45 · 보너스 사이 64 · 오른쪽 여백 97 이었다. 규칙으로 읽지 마십시오.
+ * tests/review2-fixes.test.mjs 가 값을 다시 잰다.
+ */
+.hud-combo {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.combo-fox {
+  position: absolute;
+  display: block;
+  filter: grayscale(0.85) brightness(0.78);
+  opacity: 0.5;
+  transition: filter 200ms ease, opacity 200ms ease, transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.combo-fox-1 {
+  top: 46px;
+  left: 1368px;
+  width: 119px;
+  height: 142px;
+}
+
+.combo-fox-2 {
+  top: 46px;
+  left: 1527px;
+  width: 119px;
+  height: 142px;
+}
+
+.combo-fox-3 {
+  top: 20px;
+  left: 1687px;
+  width: 143px;
+  height: 177px;
+}
+
+.combo-fox.is-lit {
+  filter: none;
+  opacity: 1;
+  transform: scale(1.06);
+}
+
+.combo-fox.is-cheer {
+  animation: comboCheer 620ms ease;
+}
+
+@keyframes comboCheer {
+  0% { transform: scale(1.06); }
+  35% { transform: scale(1.3) rotate(-6deg); }
+  62% { transform: scale(1.14) rotate(4deg); }
+  100% { transform: scale(1.06) rotate(0deg); }
+}
+
+/*
+ * 여우 위 점수(2차 수정 10번, 공통 문서 2절 — OX · 축구 · 바다속과 같은 구성).
+ *  - 첫째 · 둘째: 켜진 여우 위로 정답 점수가 작고 희게 떠올랐다 사라진다. 여우 머리(무대 y 929)와 하단 바
+ *    윗선(880) 사이에 들어가 아랫줄 팻말과 겹치지 않는다.
+ *  - 셋째(보너스): BONUS 띠와 보너스 점수. 보너스 여우는 바 윗선에서 23px 아래부터라 그 사이에 두 줄이
+ *    들어가지 않는다 — 여우 머리 위쪽에 걸쳐 띄운다. 가로로는 아랫줄 오른쪽 팻말(잉크 x ~1702) 오른쪽이다.
+ * 보임은 hidden 이 가르고 애니메이션은 꾸밈이다 — '동작 줄이기'에서도 그대로 보인다.
+ */
+.combo-gain {
+  position: absolute;
+  top: 6px;
+  z-index: 3;
+  width: 119px;
+  margin: 0;
+  color: #ffffff;
+  font-family: var(--latin-stack);
+  font-size: 34px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: center;
+  text-shadow: 0 3px 0 rgb(30 52 12 / 72%);
+  -webkit-text-stroke: 2px rgb(30 52 12 / 55%);
+  paint-order: stroke fill;
+  pointer-events: none;
+}
+
+.combo-gain-1 {
+  left: 1368px;
+}
+
+.combo-gain-2 {
+  left: 1527px;
+}
+
+.combo-gain[hidden],
+.combo-bonus-gain[hidden] {
+  display: none;
+}
+
+.combo-gain.is-showing {
+  animation: comboGainRise 900ms ease-out both;
+}
+
+@keyframes comboGainRise {
+  0% { opacity: 0; transform: translateY(14px) scale(0.86); }
+  22% { opacity: 1; transform: translateY(2px) scale(1.06); }
+  70% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-6px) scale(0.98); }
+}
+
+.combo-bonus-gain {
+  position: absolute;
+  top: -34px;
+  left: 1687px;
+  z-index: 3;
+  display: grid;
+  width: 143px;
+  justify-items: center;
+  gap: 2px;
+  pointer-events: none;
+}
+
+.combo-bonus-gain-label {
+  padding: 3px 14px 2px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ff8a2a, #e24f06);
+  color: #ffffff;
+  font-family: var(--latin-stack);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  box-shadow: 0 3px 0 rgb(120 40 0 / 55%);
+}
+
+.combo-bonus-gain-value {
+  color: #ffd84a;
+  font-family: var(--latin-stack);
+  font-size: 40px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-shadow:
+    1.9px 1.9px 0 #d9730b,
+    -1.9px 1.9px 0 #d9730b,
+    0 4px 5px rgb(3 27 78 / 55%);
+}
+
+.combo-bonus-gain.is-showing {
+  animation: comboBonusGainPop 1200ms cubic-bezier(0.22, 0.9, 0.3, 1) both;
+}
+
+@keyframes comboBonusGainPop {
+  0% { opacity: 0; transform: translateY(10px) scale(0.6); }
+  18% { opacity: 1; transform: translateY(-2px) scale(1.12); }
+  34% { opacity: 1; transform: translateY(0) scale(0.97); }
+  80% { opacity: 1; transform: translateY(-4px) scale(1); }
+  100% { opacity: 0; transform: translateY(-8px) scale(1); }
+}
+
+/* ---------- 결과 화면 ---------- */
+
+/*
+ * 구조·좌표·색 모두 형제 방들과 같다. 정답·오답·보너스 자리에 들어가는 값은
+ * 개수가 아니라 점수다.
+ */
+.end-screen {
+  overflow: hidden;
+}
+
+.result-background,
+.result-layout,
+.result-title,
+.result-point-box,
+.result-replay-button img,
+.result-action img {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+}
+
+.result-background {
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/*
+ * 등급별 여우(사장님 지시 2026-09-30). 자리는 시안 `검수_4차/자산/result/preview.png` 를
+ * 화소로 재서 잡았다. 시안도 이 방 무대와 같은 1920x1080 이라 좌표가 그대로 들어간다.
+ *
+ *   시안 여우 잉크   x 1349~1530 · y 72~336   (카드 상단선 337 에서 끊김)
+ *   카드 상자        x 316~1604 · y 337~990
+ *   시안에 그려진 것은 try_again 포즈다(보이는 폭 182 로 일치).
+ *
+ * try_again 을 left 1319 · top 68 에 두면 화면 잉크가 시안과 화소까지 같다(차이 0).
+ * 상자 아래끝은 338 이라 카드에 1px 만 걸치고, z-index 0 이라 그 1px 은 카드가 덮는다 —
+ * 시안처럼 여우가 카드 위에 얹혀 보인다.
+ */
+.result-fox {
+  position: absolute;
+  top: 68px;
+  left: 1319px;
+  z-index: 0;
+  width: 238px;
+  height: 270px;
+  pointer-events: none;
+}
+
+.result-layout {
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.result-particle-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/*
+ * 공통-3(검수 No.2 · 숨김 No.7, 사장님 확정 2026-10-12 "X버튼 위치 변경 오른쪽 상단으로 이동"): 결과 화면 X 는 오른쪽 위,
+ * 시작 · 게임 화면 X(.navigation-button — right 33 · top 33, 66x69)와 같은 자리다. 누르는 상자 80x83 안에 그림을 7px 들여
+ * 놓으므로 상자를 26 · 26 에 두면 그림이 1821..1887 · 33..102 로 게임 화면 X 와 화소까지 겹친다. 예전에는 왼쪽 위(17 · 27).
+ */
+.result-replay-button {
+  position: absolute;
+  top: 26px;
+  right: 26px;
+  z-index: 5;
+  width: 80px;
+  height: 83px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transition: filter 130ms ease, transform 130ms ease;
+}
+
+.result-replay-button img {
+  inset: 7px auto auto 7px;
+  width: 66px;
+  height: 69px;
+  object-fit: contain;
+}
+
+.result-replay-button:hover,
+.result-replay-button:focus-visible {
+  outline: none;
+  filter: brightness(1.08);
+  transform: scale(1.05);
+}
+
+.result-title {
+  top: 150px;
+  left: 705px;
+  z-index: 2;
+  width: 510px;
+  height: 132px;
+  object-fit: contain;
+}
+
+.result-points {
+  position: absolute;
+  left: 840px;
+  z-index: 2;
+  width: 140px;
+  margin: 0;
+  color: #292929;
+  font-family: var(--latin-stack);
+  font-size: 40px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: right;
+}
+
+.result-points-correct {
+  top: 512px;
+}
+
+.result-points-incorrect {
+  top: 624px;
+}
+
+.result-points-bonus {
+  top: 736px;
+}
+
+/*
+ * 공통-2(완료화면 시트 '보너스 -> '점' 추가 / 앞 + 기호 삭제' · OX 방 방식): Bonus 숫자 뒤에 '점' 을 붙인다.
+ * 세 줄의 숫자 끝이 한 줄로 맞도록 Correct · Incorrect 에도 같은 폭의 자리를 비워 둔다(보이지 않는다).
+ * 공통-16(사장님 2026-10-13 "하나는 가운데고 하나는 하단 정렬을 쓴 기분"): 기준선에 맡기면 한글 '점' 이 숫자보다
+ * 처진다. 크기로 높이를, position: relative 의 올림으로 자리를 맞춘다 — 올림은 줄 높이와 세 줄 숫자 끝 정렬을 바꾸지 않는다.
+ * 이 방 글꼴(숫자 Sofia Pro Soft 600 40px · '점' 나눔스퀘어라운드 EB)로 같은 기준선에 그려 잉크를 잰 값(위 · 아래 끝, 높이):
+ *   기준선 그대로 0.7em        숫자 73..99(27) · '점' 78..103(26) — '점' 이 위 5 · 아래 4 처진다(카드 방이 고치기 전과 같다)
+ *   OX 값 0.8em · -0.13em      '점' 71..100(30) — 이 방 숫자보다 위 2 · 아래 1 크다(OX 는 숫자 글꼴이 달라 거기서 맞은 값)
+ *   0.73em · -0.15em(채택)     '점' 73..99(27) — 숫자와 위 · 아래 끝이 같다(카드 방 값과 같다)
+ */
+.result-points::after {
+  position: relative;
+  top: -0.15em;
+  margin-left: 6.912px;
+  color: #5c6474;
+  font-family: var(--korean-stack);
+  font-size: 0.73em;
+  font-weight: 700;
+  content: "점";
+}
+
+.result-points-correct::after,
+.result-points-incorrect::after {
+  visibility: hidden;
+}
+
+.result-total {
+  position: absolute;
+  top: 610px;
+  left: 1062px;
+  z-index: 2;
+  width: 484px;
+  height: 150px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.result-rank {
+  position: absolute;
+  inset: 0 0 auto;
+  width: 100%;
+  color: #5e594a;
+  font-family: var(--korean-stack);
+  font-size: 44px;
+  line-height: 1;
+  text-align: center;
+}
+
+.result-point-box {
+  top: 68px;
+  left: 110px;
+  width: 265px;
+  height: 81px;
+  object-fit: contain;
+}
+
+/*
+ * 점수 알약 안 "1,200 점" 세로 맞춤(사용자 지시 2026-10-02 "텍스트 정렬이 안맞는데 확인해서 고쳐").
+ * 한글 글꼴이 나눔스퀘어라운드 ExtraBold 로 바뀐 뒤 실제 화면에서 잰 값(무대 px):
+ *   알약 노란 면 y 684~749(가운데 716.5) · 숫자 잉크 700.1~729.5(가운데 714.8) · "점" 잉크 698.4~736.4(가운데 717.4)
+ * 둘 다 line-height 1 상자를 가운데에 놓는데, 나눔은 글자가 상자를 더 아래까지 채워 "점"이 숫자보다 2.6px 아래에
+ * 앉고, 묶음 전체는 알약 가운데보다 1.7px 위에 있었다. 아래 두 줄로 맞춘다 —
+ *   이 상자를 2px 내려 숫자 가운데를 알약 가운데에(716.8 ≈ 716.5), "점"은 0.063em(2.6px) 올려 숫자 가운데에.
+ * 가로: 트로피 뒤로 보이는 노란 면(글자 높이에서 x 1242~1434, 가운데 1338)보다 묶음 가운데가 4px 왼쪽(1334)이라
+ *   "12,800" 은 트로피 쪽 틈 2px · 오른쪽 틈 11px 로 치우쳤다. 상자를 4px 오른쪽으로 옮겼다(172 → 176).
+ * 글꼴이 바뀌면 다시 재야 하는 값이다(README "한글 글꼴").
+ */
+.result-total-score {
+  position: absolute;
+  top: 70px;
+  left: 176px;
+  z-index: 1;
+  display: flex;
+  width: 203px;
+  height: 81px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  line-height: 1;
+}
+
+.result-score-number,
+.result-score-unit {
+  display: block;
+  line-height: 1;
+}
+
+.result-score-number {
+  max-width: 150px;
+  overflow: hidden;
+  color: #ff20a8;
+  font-family: var(--latin-stack);
+  font-size: 44px;
+  text-overflow: ellipsis;
+}
+
+.result-score-unit {
+  color: #655d46;
+  font-family: var(--korean-stack);
+  font-size: 41px;
+  /* 숫자와 세로 가운데를 맞춘다 — 위 .result-total-score 주석의 실측값. */
+  transform: translateY(-0.063em);
+}
+
+.result-message {
+  position: absolute;
+  top: 794px;
+  left: 1062px;
+  z-index: 3;
+  width: 484px;
+  margin: 0;
+  color: #5e594a;
+  font-family: var(--korean-stack);
+  font-size: 17px;
+  font-weight: 800;
+  text-align: center;
+}
+
+/*
+ * 검수 4차 9-1(사장님 지시 2026-09-29): 누를 수 없는 버튼은 회색으로 두지 말고
+ * 자리까지 없앤다. 그 게임이 아예 안 쓰는 버튼이든 이번 판에만 못 누르는 버튼이든
+ * 똑같이 숨긴다 — 두 경우를 다르게 두면 "회색 버튼이 어떤 때는 보이고 어떤 때는
+ * 안 보이는" 상태가 되어 더 헷갈린다. 남은 버튼은 가운데로 모은다.
+ */
+.result-actions {
+  position: absolute;
+  top: 856px;
+  left: 50%;
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  transform: translateX(-50%);
+}
+
+.result-action {
+  position: relative;
+  width: 379px;
+  height: 91px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.result-action img {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.result-action:not(:disabled) {
+  cursor: pointer;
+  transition: filter 130ms ease, transform 130ms ease;
+}
+
+.result-action:not(:disabled):hover,
+.result-action:not(:disabled):focus-visible {
+  outline: none;
+  filter: brightness(1.08) saturate(1.04);
+  transform: translateY(-4px) scale(1.02);
+}
+
+.result-action:not(:disabled):active {
+  filter: brightness(0.97);
+  transform: translateY(5px) scale(0.985);
+}
+
+/* 못 누르는 버튼은 회색이 아니라 자리째 사라진다(검수 4차 9-1). */
+.result-action:disabled {
+  display: none;
+}
+
+/* ---------- 팝업 ---------- */
+
+.incorrect-answer-dialog,
+.result-dialog {
+  position: absolute;
+  inset: 0;
+  font-family: var(--korean-stack);
+}
+
+.incorrect-answer-dialog {
+  z-index: 60;
+}
+
+.result-dialog {
+  z-index: 90;
+}
+
+.incorrect-answer-backdrop,
+.result-dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  cursor: default;
+}
+
+.incorrect-answer-backdrop {
+  background: rgb(16 32 6 / 58%);
+}
+
+/* ---- 오답노트 ---- */
+
+.incorrect-answer-modal {
+  position: absolute;
+  top: 61px;
+  left: 50%;
+  width: 1347px;
+  height: 980px;
+  transform: translateX(-50%);
+}
+
+.incorrect-answer-background {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.incorrect-answer-close,
+.result-dialog-close {
+  position: absolute;
+  z-index: 3;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: filter 130ms ease, transform 130ms ease;
+}
+
+/*
+ * 공통-11(사장님 2026-10-12 "오답 박스 X버튼 위치 지금 올려준것 처럼 배치, 이미지가 다를수 있으니 배치와 크기만 동일하게"):
+ * X 는 초록 제목줄 **안** 오른쪽 끝, 제목줄 세로 가운데에 놓고 팝업 모서리 밖으로 걸치지 않는다. 그림은 이 방 것 그대로다.
+ * 크기 · 틈은 OX 방 보고 값을 무대 px 로 옮겼다(팝업 폭 1347 이 같다) — 폭 60(팝업 폭의 4.45%) · 높이 67.8 · 오른쪽 틈 24(1.78%).
+ * 이 방 제목줄은 창 기준 0..97.6(그림 0..97 을 974 → 980 으로 늘린 값, 가운데 48.8)이라 위 15 에 두면 그림 가운데(48.9)가 맞는다.
+ * 예전에는 창 모서리 밖(-20 · -16, 77x87)에 걸쳐 있었다.
+ */
+.incorrect-answer-close {
+  top: 15px;
+  right: 24px;
+  width: 60px;
+  height: 67.8px;
+}
+
+.incorrect-answer-close:hover,
+.incorrect-answer-close:focus-visible {
+  outline: none;
+  filter: brightness(1.1);
+  transform: translateY(-3px) scale(1.04);
+}
+
+.incorrect-answer-close:active,
+.result-dialog-close:active {
+  transform: translateY(3px) scale(0.97);
+}
+
+.incorrect-answer-close img,
+.result-dialog-close img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/*
+ * 오답노트 표 — 공통-1(검수 No.54, 사장님 2026-10-12 "화면이라면 OX퀴즈 처럼 적용"). 피드백 세 가지:
+ *   ① 상단 회색 영역에 '단어' · '뜻' 글자  ② 항목명 가운데 정렬  ③ 스피커 왼쪽 여백 축소 · 단어 열 너비 축소.
+ * OX styles.css 의 cqw 값을 무대 1920 기준 px 로 옮겼다(1cqw = 19.2px). 그림(bg_incorrect.png)과 색은 이 방 것 그대로다.
+ * 이 방 그림(1346x974 를 창 1347x980 으로 늘림)에서 잰 자리 — 회색 띠 101..162, 흰 바탕 162..974, 안쪽 가로 6..1340.
+ *   표      위 101 · 왼쪽 9 · 1329 x 873   (머리글 = 회색 띠 61 + 목록 = 흰 바탕 812)
+ *   열      91 / 403.2 / 나머지            (팝업 폭 기준: 스피커 가운데 5%, 단어 칸 7.4~37.3%, 뜻은 40.1% 부터 — OX 와 같다)
+ *   줄      높이 93.08 이상 · 글자 27.26 · 흰 바탕 그대로(배경 · 둥근 모서리 · 구분선 · 줄 사이 틈 없음)
+ * 지나간 이야기(지금 규칙 아님): 2차 때는 머리글을 회색 띠 아래(위 176)에 파란 글자 · 왼쪽 정렬로 두고, 줄마다 연한 파랑
+ * 둥근 배경과 파란 원 스피커를 썼다(열 219.8 / 492). 규칙으로 읽지 마십시오.
+ */
+.incorrect-answer-table {
+  position: absolute;
+  top: 101px;
+  left: 9px;
+  width: 1329px;
+  height: 873px;
+  color: #111;
+  /* 오답 목록 한글(머리글 '단어 · 뜻', 뜻, 빈 목록 문구)은 보통 굵기 — 위 "NanumSquareRound List" 주석. 영어 단어 칸은 아래에서 영어 글꼴. */
+  font-family: "NanumSquareRound List", var(--korean-stack);
+}
+
+.incorrect-answer-grid {
+  display: grid;
+  grid-template-columns: 91px 403.2px minmax(0, 1fr);
+}
+
+/* 회색 띠 높이(61px)와 같다. 글자는 띠 안 가로 · 세로 가운데에 회색으로 놓인다. */
+.incorrect-answer-header {
+  height: 61px;
+  color: #666;
+  font-size: 23.616px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.incorrect-answer-header > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+/* '뜻' 은 뜻 칸(40.1% 부터)의 가운데에 온다 — 뜻 글자와 같은 들임을 준다. */
+.incorrect-answer-header > span:nth-child(3) {
+  padding-left: 37.44px;
+}
+
+/* 회색 띠 아래 흰 바탕 전체다. */
+.incorrect-answer-list {
+  height: 812px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: #fff;
+  -webkit-overflow-scrolling: touch;
+}
+
+.incorrect-answer-list:focus-visible {
+  outline: 3px solid rgb(89 111 215 / 55%);
+  outline-offset: -4px;
+}
+
+.incorrect-answer-list::-webkit-scrollbar {
+  width: 19px;
+}
+
+.incorrect-answer-list::-webkit-scrollbar-track {
+  background: #f2f2f2;
+}
+
+.incorrect-answer-list::-webkit-scrollbar-thumb {
+  border: 3px solid #f2f2f2;
+  border-radius: 999px;
+  background: #bcbcbc;
+}
+
+.incorrect-answer-row {
+  min-height: 93.08px;
+  color: #111;
+  font-size: 27.264px;
+}
+
+.incorrect-answer-cell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 93.08px;
+  padding: 0;
+}
+
+/* 누르는 자리(53.76)의 가운데가 팝업 폭의 5% 에 온다(9 + 31.47 + 26.88 = 67.35). */
+.incorrect-answer-audio {
+  justify-content: flex-start;
+  padding: 0 0 0 31.47px;
+}
+
+/* 원은 그리지 않는다 — 파란 스피커 그림만 보인다(OX 와 같다). 누르는 자리 크기는 그대로 둔다. */
+.incorrect-answer-speaker {
+  display: grid;
+  flex: 0 0 auto;
+  width: 53.76px;
+  height: 53.76px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.incorrect-answer-speaker:hover:not(:disabled),
+.incorrect-answer-speaker:focus-visible:not(:disabled) {
+  outline: 4px solid rgb(90 106 216 / 35%);
+  filter: brightness(1.08);
+}
+
+.incorrect-answer-speaker:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+/* 그림(37x30)의 비율 그대로, 팝업 폭의 2.4%. 색은 그림의 파란색 그대로다. */
+.incorrect-answer-speaker img {
+  display: block;
+  width: 32.256px;
+  height: 26.15px;
+  pointer-events: none;
+}
+
+/*
+ * 단어(영어) 칸은 레이싱 · OX 와 같은 Lexend Regular 400(사장님 2026-10-15 "두더지 단어도 Lexend로 맞추라고 전달해", 관리방 전달).
+ * 레이싱과 같은 Lexend-Regular.ttf(md5 3bb33227…)를 이 방은 "Lexend Game" 으로 이미 싣고 있다. 받지 못하면 이 방 영어 스택으로 간다.
+ * 지나간 이야기(지금 규칙 아님): 그 전에는 이 방 영어 스택(맨 앞 Sofia Pro Soft)으로 그렸다. 규칙으로 읽지 마십시오.
+ */
+.incorrect-answer-word {
+  justify-content: center;
+  padding: 0 9.6px;
+  font-family: "Lexend Game", var(--latin-stack);
+  line-height: 1.08;
+  text-align: center;
+}
+
+/*
+ * 글자 크기는 OX 단어 크기(팝업 폭의 2.2% = 29.95px)를 쓰되, 칸을 넘는 긴 단어만 script.js 가
+ * --incorrect-word-scale 로 줄인다. 그 변수는 이 span 에 붙으므로 크기도 여기에 둔다.
+ */
+.incorrect-answer-word-text {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  font-size: calc(29.952px * var(--incorrect-word-scale, 1));
+  font-weight: 400;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * 뜻은 잘리지 않고 줄을 바꾼다(공통 문서 2절 "긴 단어 · 뜻도 잘리지 않게"). 87자 뜻도 들어오므로 한 줄 말줄임으로는
+ * 뒷부분이 보이지 않는다. 뜻 칸은 팝업 폭의 40.1% 에서 시작한다(단어 칸과 37.44 띄움 — OX 와 같다).
+ */
+.incorrect-answer-meaning {
+  padding-right: 19.2px;
+  padding-left: 37.44px;
+  /*
+   * 같은 뜻을 보여 주는 칸이라 뜻 팻말과 같이 띄어쓰기에서만 나눈다(사장님 답 "두더지만 띄어쓰기에서" — 이 방 화면에서
+   * 320개 중 38개가 낱말 중간에서 갈렸다). 칸이 넓어 덩어리가 넘칠 일은 드물고, 그래도 넘치면 overflow-wrap: anywhere 가 끊는다.
+   */
+  word-break: keep-all;
+  /*
+   * 보통 굵기(사장님 2026-10-15 "1번으로 통일 해") — 레이싱과 같은 나눔스퀘어라운드 Bold 파일에 굵기 500(레이싱 · OX 와 같은 값).
+   * 지나간 이야기(지금 규칙 아님): 2026-10-02 사장님 답 "가. 본문도 Bold" 로 700 이었고 글꼴은 EB 한 벌이라 굵게 나왔다.
+   * 규칙으로 읽지 마십시오.
+   */
+  font-weight: 500;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.incorrect-answer-empty {
+  display: grid;
+  height: 100%;
+  margin: 0;
+  place-items: center;
+  color: #777;
+  font-size: 32px;
+  font-weight: 700;
+}
+
+/* ---- 랭킹 ---- */
+
+/*
+ * 랭킹 팝업은 형제 방들과 같은 공용 룩이다 — 파란 카드. 게임 테마가 달라도
+ * 바꾸지 않는다. 형제(spellingbuilde_start)는 밤하늘, 이 방은 바깥 풍경이지만
+ * 둘 다 같은 파란 카드를 쓴다. 닫기 버튼(btn_close_popup.png)이 파란 원형
+ * 그림이라 카드만 초록으로 돌리면 버튼 혼자 겉돈다.
+ */
+.result-dialog-backdrop {
+  background:
+    radial-gradient(circle at 16% 19%, rgb(255 218 63 / 13%) 0 9px, transparent 10px),
+    radial-gradient(circle at 84% 76%, rgb(255 92 117 / 14%) 0 11px, transparent 12px),
+    radial-gradient(circle at 50% 24%, rgb(126 191 235 / 22%), transparent 43%),
+    rgb(10 34 6 / 76%);
+  backdrop-filter: blur(5px);
+}
+
+.result-dialog-card {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  width: 1320px;
+  height: 890px;
+  padding: 0 42px 38px;
+  overflow: hidden;
+  border: 10px solid #6fae34;
+  border-radius: 48px;
+  background:
+    linear-gradient(180deg, transparent 0 168px, #f2fbe8 168px 100%),
+    linear-gradient(135deg, #2f6b12, #55972a);
+  box-shadow:
+    inset 0 0 0 4px rgb(205 240 150 / 78%),
+    0 24px 0 rgb(38 88 13 / 88%);
+  color: #2f4a17;
+  transform: translateX(-50%);
+}
+
+/* 머리 영역 여백 28 / 105 / 25 는 OX · 축구와 같다(2차 수정, 공통 문서 2절). 예전에는 0 이었다. */
+.ranking-header {
+  position: relative;
+  display: grid;
+  min-height: 158px;
+  padding: 28px 105px 25px;
+  align-content: center;
+  justify-items: center;
+}
+
+/* 검수 r8 로 게임명 줄(.ranking-kicker)을 없앴다. 타이틀만 세로 가운데에 온다. */
+.ranking-header h2 {
+  margin: 8px 0 0;
+  color: #fff;
+  font-family: "Lexend Game", var(--latin-stack);
+  font-size: 60px;
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+  text-shadow: 0 5px 0 #245409;
+}
+
+.result-dialog-close {
+  top: 30px;
+  right: 30px;
+  width: 77px;
+  height: 87px;
+}
+
+.result-dialog-close:hover,
+.result-dialog-close:focus-visible {
+  outline: none;
+  filter: brightness(1.1) drop-shadow(0 0 6px rgb(214 247 159 / 88%));
+  transform: translateY(-3px) scale(1.04);
+}
+
+.ranking-my-best {
+  display: grid;
+  grid-template-columns: 104px 150px minmax(0, 1fr) 250px;
+  min-height: 126px;
+  margin: 18px 0 22px;
+  padding: 14px 30px;
+  align-items: center;
+  border: 4px solid #ffbd2e;
+  border-radius: 28px;
+  background: linear-gradient(135deg, #fffdf3 0%, #ffe584 100%);
+  box-shadow:
+    inset 0 3px 0 rgb(255 255 255 / 92%),
+    0 0 0 3px rgb(255 240 160 / 55%),
+    0 5px 14px rgb(52 97 31 / 24%);
+}
+
+.ranking-my-badge {
+  display: grid;
+  width: 80px;
+  height: 80px;
+  overflow: hidden;
+  place-items: center;
+  border: 4px solid #ffbc22;
+  border-radius: 50%;
+  color: #fff;
+  background:
+    radial-gradient(circle, #fff 0 32%, transparent 34%),
+    linear-gradient(180deg, #ffe53c, #ff9f13);
+  box-shadow: 0 4px 0 #db7910, 0 4px 13px rgb(255 166 25 / 28%);
+  font-size: 42px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.ranking-my-badge img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+}
+
+.ranking-my-label {
+  color: #f29713;
+  font-family: "Lexend Game", var(--latin-stack);
+  font-size: 25px;
+  font-weight: 600;
+}
+
+.ranking-my-name {
+  min-width: 0;
+  overflow: hidden;
+  color: #2f4a17;
+  font-size: 34px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ranking-my-score {
+  color: #f2269d;
+  font-family: "Lexend Game", var(--latin-stack);
+  font-size: 39px;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ranking-my-score::after,
+.ranking-row-score::after {
+  margin-left: 7px;
+  color: #5c6474;
+  font-family: var(--korean-stack);
+  font-size: 0.7em;
+  font-weight: 700;
+  content: "점";
+}
+
+.ranking-table {
+  display: grid;
+  grid-template-rows: 70px minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+  border: 4px solid #b6e08a;
+  border-radius: 28px;
+  background: #fff;
+}
+
+.ranking-grid {
+  display: grid;
+  grid-template-columns: 120px 84px minmax(0, 1fr) 250px;
+  align-items: center;
+}
+
+.ranking-table-header {
+  padding-right: 16px;
+  border-bottom: 3px solid #dcefc8;
+  color: #4a6b2e;
+  background: #edf8e0;
+  font-size: 25px;
+  font-weight: 800;
+}
+
+.ranking-table-header > span {
+  min-width: 0;
+  text-align: center;
+}
+
+.result-dialog-content {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: #8cc255 #eef8e3;
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+.result-dialog-content::-webkit-scrollbar {
+  width: 16px;
+}
+
+.result-dialog-content::-webkit-scrollbar-track {
+  background: #eef8e3;
+}
+
+.result-dialog-content::-webkit-scrollbar-thumb {
+  border: 3px solid #eef8e3;
+  border-radius: 999px;
+  background: #8cc255;
+}
+
+.ranking-row {
+  min-height: 86px;
+  padding-right: 16px;
+  align-items: center;
+  border-bottom: 2px solid #e7f2da;
+  color: #35492a;
+  background: #fff;
+}
+
+.ranking-row:last-child {
+  border-bottom: 0;
+}
+
+.ranking-row.is-top-three {
+  background: linear-gradient(90deg, rgb(255 240 160 / 50%), #fff 48%);
+}
+
+.ranking-cell {
+  min-width: 0;
+  padding: 11px 16px;
+  font-size: 29px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.ranking-row-rank {
+  color: #3d7a1c;
+  font-family: "Lexend Game", var(--latin-stack);
+  font-variant-numeric: tabular-nums;
+}
+
+.ranking-row.is-rank-1 .ranking-row-rank { color: #e79b00; }
+.ranking-row.is-rank-2 .ranking-row-rank { color: #778799; }
+.ranking-row.is-rank-3 .ranking-row-rank { color: #b56b39; }
+
+.ranking-row-badge {
+  display: grid;
+  padding: 6px;
+  place-items: center;
+  color: #8fb36f;
+  font-size: 30px;
+}
+
+.ranking-row-badge img {
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+}
+
+.ranking-row-name {
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ranking-row-score {
+  color: #2c4020;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ranking-empty {
+  display: grid;
+  height: 100%;
+  min-height: 154px;
+  margin: 0;
+  place-items: center;
+  color: #74886a;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+/* ---- 도움말 ---- */
+
+/*
+ * 형제 방들과 같은 구성이다. 팝업 틀을 쓰지 않고 전용 배경 위에 도움말 문구를
+ * 그대로 가운데 정렬로 뿌린다. 치수는 형제의 cqw 값을 px로 환산한 값이다.
+ */
+.help-screen {
+  z-index: 70;
+  display: grid;
+  place-items: center;
+}
+
+.help-background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+/*
+ * 흰 베일은 걷었다(2차 수정 2번 — PDF "배경 이미지 딤드 처리 안된 이미지로 교체", 공통 문서 1절
+ * "흰 막 걷고 진한 남색 글자 테두리, 흐림 없음"). 예전에는 help-screen::after 로 66% 흰 막을 얹었다.
+ * help_bg.png 는 시작 화면 그림과 같은 파일이라(sha256 같음) 그림 자체에는 막도 흐림도 없다.
+ */
+
+/*
+ * 도움말 화면은 정적이다. 닫기 버튼에도 움직임을 넣지 않는다.
+ *
+ * 문구가 화면을 넘으면 스크롤한다. 형제 방들은 스크롤바를 감췄지만(`scrollbar-
+ * width: none`) 그러면 아래에 더 있다는 것을 알 방법이 없다. 여기서는 초록
+ * 테마에 맞춘 스크롤바를 보여 준다. `scrollbar-gutter: stable` 은 스크롤바가
+ * 생겼다 사라질 때 글자가 좌우로 튀지 않게 자리를 미리 잡아 둔다.
+ */
+.help-content-viewport {
+  position: relative;
+  z-index: 1;
+  width: 1382px;
+  max-height: 883px;
+  padding: 19px 38px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: #5f9c2b rgb(255 255 255 / 55%);
+  scrollbar-gutter: stable;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  /*
+   * scrollbar-width 는 일부러 지정하지 않는다. `thin` 을 주면 크로미움이 자기
+   * 얇은 스크롤바를 쓰면서 아래 ::-webkit-scrollbar 규칙을 무시하고, macOS 의
+   * 오버레이 설정에서는 폭 0 으로 떠서 있으나 마나가 된다.
+   */
+}
+
+.help-content-viewport::-webkit-scrollbar {
+  width: 14px;
+}
+
+.help-content-viewport::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgb(255 255 255 / 55%);
+}
+
+.help-content-viewport::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: #5f9c2b content-box;
+}
+
+/*
+ * 아래에 더 있다는 표시. OS 스크롤바는 설정에 따라 아예 안 보이거나 스크롤하는
+ * 동안만 잠깐 뜬다 — 아이가 보는 화면에서 그것만 믿을 수는 없다. 넘치는 동안
+ * 화면 아래에 옅은 띠와 화살표를 띄우고, 끝까지 내리면 사라진다.
+ */
+/* 스크롤 상자와 안내를 함께 담는 자리. 안내는 이 상자를 기준으로 붙는다. */
+.help-scroll-area {
+  position: relative;
+  z-index: 1;
+}
+
+/*
+ * 보임/안 보임은 display 로만 가른다. opacity 전환에 걸어 두면 전환이 진행되지
+ * 않는 상황(백그라운드 탭, 절전, 모션 줄이기)에서 안내가 영영 투명하게 남는다 —
+ * 판 등장과 시작 화면에서 이미 두 번 겪은 함정이다.
+ */
+.help-scroll-hint {
+  position: absolute;
+  right: 6px;
+  bottom: 0;
+  left: 6px;
+  z-index: 2;
+  display: none;
+  height: 96px;
+  align-items: end;
+  justify-items: center;
+  padding-bottom: 10px;
+  /* 흰 띠는 흰 막을 아래쪽에 되살리므로 쓰지 않는다(2차 수정 2번). 남색으로 옅게 깐다. */
+  background: linear-gradient(180deg, transparent, rgb(10 42 107 / 38%) 72%);
+  pointer-events: none;
+}
+
+.help-screen.has-more .help-scroll-hint {
+  display: grid;
+}
+
+.help-scroll-hint::after {
+  display: block;
+  color: #ffffff;
+  text-shadow: 0 0 0 #0a2a6b, 2px 2px 0 #0a2a6b, -2px 2px 0 #0a2a6b, 0 3px 0 #061d4f;
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1;
+  content: "▾";
+  animation: hintBob 1400ms ease-in-out infinite;
+}
+
+@keyframes hintBob {
+  50% {
+    transform: translateY(7px);
+  }
+}
+
+.help-content-viewport:focus-visible {
+  outline: none;
+}
+
+.help-content {
+  display: grid;
+  gap: 46px;
+  text-align: center;
+}
+
+/*
+ * 글자는 흰 막 없이 그림 위에 바로 놓이므로 진한 남색 테두리로 읽히게 한다(2차 수정 2번).
+ * 색 · 테두리는 레이싱 · 바다속 · 카드와 같다 — 첫 제목 주황 #ff6818, 이후 제목 #12efd4, 본문 흰색,
+ * 테두리 #0a2a6b(제목 3px · 아래 5px, 본문 2.5px · 아래 4px, 아래 그림자 #061d4f). 그 방들의 cqw 값을
+ * 무대 1920 기준 px 로 옮겼다. 예전에는 흰 막 위라 주황 #a34400 · 보라 #8f00e0 · 검정 본문이었다.
+ * 본문은 굵게 쓰지 않는다(2차 수정 1번). 제목은 제목이라 굵기를 둔다.
+ */
+.help-section-title {
+  margin: 0 0 16px;
+  color: #12efd4;
+  font-family: var(--korean-stack);
+  font-size: 50px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-shadow:
+    3px 0 0 #0a2a6b, -3px 0 0 #0a2a6b, 0 3px 0 #0a2a6b, 0 -3px 0 #0a2a6b,
+    3px 3px 0 #0a2a6b, -3px 3px 0 #0a2a6b, 3px -3px 0 #0a2a6b, -3px -3px 0 #0a2a6b,
+    0 5px 0 #061d4f;
+}
+
+.help-section:first-child .help-section-title {
+  color: #ff6818;
+}
+
+.help-section-content {
+  margin: 0;
+  color: #ffffff;
+  font-family: var(--korean-stack);
+  font-size: 37px;
+  /*
+   * 도움말 본문도 나눔스퀘어라운드다(사장님 답 2026-10-02 14:13 "가. 본문도 Bold" — 부모 원장 d27fe666acf5a500,
+   * 글꼴 파일은 14:20 ExtraBold 로 바뀜). 2차 수정 1번 "도움말 본문 굵은 글씨 없음"(400)은 이 답으로 바뀌었다.
+   * 받은 글꼴이 한 벌이라 400 을 줘도 그 굵기로 그려진다 — 받지 못해 대체 글꼴로 그릴 때도 굵게 700 으로 적는다.
+   */
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: pre-line;
+  text-shadow:
+    2.5px 0 0 #0a2a6b, -2.5px 0 0 #0a2a6b, 0 2.5px 0 #0a2a6b, 0 -2.5px 0 #0a2a6b,
+    2.5px 2.5px 0 #0a2a6b, -2.5px 2.5px 0 #0a2a6b, 2.5px -2.5px 0 #0a2a6b, -2.5px -2.5px 0 #0a2a6b,
+    0 4px 0 #061d4f;
+}
+
+.help-status {
+  display: grid;
+  gap: 19px;
+  place-items: center;
+  padding: 38px 0;
+  color: #ffffff;
+  font-family: var(--korean-stack);
+  font-size: 26px;
+  font-weight: 700;
+  text-shadow:
+    2px 0 0 #0a2a6b, -2px 0 0 #0a2a6b, 0 2px 0 #0a2a6b, 0 -2px 0 #0a2a6b,
+    0 3px 0 #061d4f;
+}
+
+.help-retry-button {
+  padding: 12px 33px;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(180deg, #7fbb45, #4d8420);
+  box-shadow: 0 6px 0 #3a6415;
+  font-family: var(--korean-stack);
+  font-size: 21px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+/* ---------- 로딩 / 오류 ---------- */
+
+/*
+ * 로딩·오류를 한 화면에서 쓴다. 형제처럼 제목 줄을 따로 두고 is-error를 붙여
+ * 둘을 눈으로 구분한다 — 예전에는 둘이 똑같이 생겨서 기다리는 중인지 실패한
+ * 것인지 알 수가 없었다.
+ */
+.loading-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  background: rgb(26 52 12 / 66%);
+  backdrop-filter: blur(4px);
+}
+
+.loading-card {
+  display: grid;
+  width: 38%;
+  min-height: 33%;
+  place-items: center;
+  padding: 40px 58px;
+  border: 8px solid #a8d97a;
+  border-radius: 46px;
+  background: #f9fdf3;
+  box-shadow: 0 14px 0 #4d8420, 0 23px 54px rgb(16 46 8 / 34%);
+  text-align: center;
+}
+
+.loading-card h2,
+.loading-card p {
+  margin: 0;
+}
+
+.loading-title {
+  font-family: var(--korean-stack);
+  color: #2f6b12;
+  font-size: 45px;
+}
+
+.loading-message {
+  font-family: var(--korean-stack);
+  color: #5d7049;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.loading-spinner {
+  width: 77px;
+  height: 77px;
+  border: 10px solid #ddefc8;
+  border-top-color: #5f9c2b;
+  border-radius: 50%;
+  animation: loadingSpin 850ms linear infinite;
+}
+
+@keyframes loadingSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-screen.is-error .loading-spinner {
+  border-color: #f6b2bd;
+  border-top-color: #e84563;
+  animation: none;
+}
+
+.retry-button {
+  padding: 14px 35px;
+  border: 3px solid #ffffff;
+  border-radius: 999px;
+  color: #ffffff;
+  background: linear-gradient(180deg, #7fbb45, #4d8420);
+  box-shadow: 0 6px 0 #3a6415;
+  font-family: var(--korean-stack);
+  font-size: 21px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.retry-button:hover,
+.retry-button:focus-visible {
+  outline: none;
+  filter: brightness(1.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board,
+  .combo-fox {
+    transition-duration: 1ms;
+  }
+
+  /*
+   * 등장·퇴장 애니메이션을 끄면 판은 기본 상태(보이는 상태)로 남는다. 사라지는
+   * 쪽은 곧바로 누를 수 없게 되고, 판을 거둘 때는 WAVE_LEAVE_MS(320ms) 뒤
+   * syncBoard 가 hidden 을 씌운다 — 그 사이에는 흐려지지 않은 채 잠깐 남는다.
+   */
+  .help-scroll-hint::after,
+  .board.is-entering,
+  .board.is-leaving,
+  .board.is-matched,
+  .board.is-wrong,
+  .combo-fox.is-cheer,
+  .start-logo.logo-enter,
+  .start-fox,
+  .start-fox.fox-enter,
+  .hud-timer.is-urgent .hud-timer-clock,
+  .hud-timer.is-critical .hud-timer-clock,
+  .hud-timer.is-urgent .hud-timer-fill,
+  .hud-timer.is-critical .hud-timer-fill,
+  .hud-timer.is-urgent .hud-timer-icon,
+  .hud-timer.is-critical .hud-timer-icon,
+  .combo-gain.is-showing,
+  .combo-bonus-gain.is-showing,
+  .start-menu,
+  .start-menu-button:not(:disabled)::after {
+    animation: none;
+  }
+
+  .loading-spinner {
+    animation-duration: 2400ms;
+  }
+}

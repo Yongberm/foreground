@@ -1,0 +1,468 @@
+<!doctype html><meta charset="utf-8"><title>trace-assets 빌더</title>
+<link rel="stylesheet" href="../styles.css">
+<style>body{background:#fff;font:14px/1.5 monospace;padding:16px}
+textarea{width:100%;height:60vh;font:11px/1.4 monospace}</style>
+<h3>획 가이드 빌더 — 폰트 중심선(medial axis)에서 생성</h3>
+<p id="log">폰트 로드 중…</p><textarea id="out"></textarea>
+<script src="stroke-spec.js"></script>
+<script>
+/* 획 수·순서·방향·시작/끝 지점은 교육 규칙(사람이 정의) — 폰트에 없는 정보.
+   그 사이 경로는 폰트 글리프를 세선화한 중심선에서 뽑는다. */
+const W=280, HALF=W/2;
+const cv=document.createElement('canvas'); cv.width=W; cv.height=W;
+const cx=cv.getContext('2d');
+const FONT='700 '+W+'px "SofiaProSoft", "Lexend", system-ui, sans-serif';
+
+/* 게임과 동일하게 잉크 바운딩박스 기준 중앙정렬 */
+function render(ch){
+  const draw=(ox,oy)=>{cx.clearRect(0,0,W,W);cx.fillStyle='#000';
+    cx.textAlign='center';cx.textBaseline='middle';cx.font=FONT;
+    cx.fillText(ch,HALF+ox,HALF+oy);return cx.getImageData(0,0,W,W).data;};
+  let d=draw(0,0),mnx=W,mny=W,mxx=-1,mxy=-1;
+  for(let y=0;y<W;y++)for(let x=0;x<W;x++) if(d[(y*W+x)*4+3]>128){
+    if(x<mnx)mnx=x;if(x>mxx)mxx=x;if(y<mny)mny=y;if(y>mxy)mxy=y;}
+  d=draw(HALF-(mnx+mxx)/2,HALF-(mny+mxy)/2);
+  const b=new Uint8Array(W*W);
+  for(let i=0;i<W*W;i++) b[i]=d[i*4+3]>128?1:0;
+  return b;
+}
+const inkAt=(b,x,y)=>{const xi=Math.round(x),yi=Math.round(y);
+  return !(xi<0||yi<0||xi>=W||yi>=W)&&!!b[yi*W+xi];};
+
+/* Zhang-Suen 세선화 */
+function thin(src){
+  const b=Uint8Array.from(src),at=(x,y)=>(x<0||y<0||x>=W||y>=W)?0:b[y*W+x];
+  let ch=true,g=0;
+  while(ch&&g++<200){ ch=false;
+    for(let pass=0;pass<2;pass++){ const del=[];
+      for(let y=1;y<W-1;y++)for(let x=1;x<W-1;x++){
+        if(!b[y*W+x])continue;
+        const p=[at(x,y-1),at(x+1,y-1),at(x+1,y),at(x+1,y+1),
+                 at(x,y+1),at(x-1,y+1),at(x-1,y),at(x-1,y-1)];
+        const n=p.reduce((a,c)=>a+c,0); if(n<2||n>6)continue;
+        let t=0; for(let i=0;i<8;i++) if(!p[i]&&p[(i+1)%8])t++;
+        if(t!==1)continue;
+        if(pass===0){if(p[0]*p[2]*p[4]||p[2]*p[4]*p[6])continue;}
+        else{if(p[0]*p[2]*p[6]||p[0]*p[4]*p[6])continue;}
+        del.push(y*W+x);}
+      if(del.length){ch=true;del.forEach(i=>b[i]=0);}}}
+  return b;
+}
+/* 세선화가 획 끝·모서리에 남기는 짧은 곁가지를 잘라낸다.
+   이걸 두면 최단경로가 곁가지 끝까지 갔다가 되돌아온다. */
+function prune(sk, minLen, keep){
+  const b=Uint8Array.from(sk);
+  const guard=(i)=>{ const x=i%W, y=(i/W)|0;
+    return (keep||[]).some(k=>(k[0]-x)*(k[0]-x)+(k[1]-y)*(k[1]-y) <= 144); };
+  const deg=(i)=>nbrs(b,i).length;
+  for(let round=0;round<12;round++){
+    const leaves=[];
+    for(let i=0;i<W*W;i++) if(b[i]&&deg(i)===1) leaves.push(i);
+    let cut=0;
+    for(const leaf of leaves){
+      if(!b[leaf])continue;
+      const branch=[leaf]; let cur=leaf,prev=-1,len=0;
+      while(true){
+        const nb=nbrs(b,cur).filter(n=>n[0]!==prev);
+        if(nb.length!==1)break;                 // 분기점 도달 또는 끝
+        len+=nb[0][1]; prev=cur; cur=nb[0][0]; branch.push(cur);
+        if(len>minLen)break;
+      }
+      if(guard(leaf)) continue;          // 규칙이 아는 획 끝은 지킨다
+      if(len<=minLen && nbrs(b,cur).length>=3){ // 짧고 분기점에 붙은 가지만
+        branch.pop();                            // 분기점 자체는 남긴다
+        branch.forEach(i=>b[i]=0); cut++;
+      }
+    }
+    if(!cut)break;
+  }
+  return b;
+}
+
+/* 연결 요소 (i·j의 점처럼 떨어진 부분 분리) */
+function components(sk){
+  const lab=new Int32Array(W*W).fill(-1); const comps=[];
+  for(let i=0;i<W*W;i++){ if(!sk[i]||lab[i]>=0)continue;
+    const id=comps.length,st=[i],mem=[]; lab[i]=id;
+    while(st.length){ const u=st.pop(); mem.push(u);
+      const x=u%W,y=(u/W)|0;
+      for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+        const nx=x+dx,ny=y+dy; if(nx<0||ny<0||nx>=W||ny>=W)continue;
+        const v=ny*W+nx; if(sk[v]&&lab[v]<0){lab[v]=id;st.push(v);} } }
+    comps.push(mem); }
+  return {lab,comps};
+}
+const nbrs=(sk,i)=>{const x=i%W,y=(i/W)|0,o=[];
+  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+    if(!dx&&!dy)continue; const nx=x+dx,ny=y+dy;
+    if(nx<0||ny<0||nx>=W||ny>=W)continue;
+    if(sk[ny*W+nx])o.push([ny*W+nx,Math.hypot(dx,dy)]);}
+  return o;};
+function dijkstra(sk,a,b){
+  const dist=new Map([[a,0]]),prev=new Map(),seen=new Set(),q=[[0,a]];
+  while(q.length){ q.sort((p,r)=>p[0]-r[0]); const [dv,u]=q.shift();
+    if(seen.has(u))continue; seen.add(u); if(u===b)break;
+    for(const [v,w] of nbrs(sk,u)){ const nd=dv+w;
+      if(nd<(dist.has(v)?dist.get(v):1e9)){dist.set(v,nd);prev.set(v,u);q.push([nd,v]);} } }
+  if(!seen.has(b))return null;
+  const out=[];let c=b;
+  while(c!==undefined){out.push([c%W,(c/W)|0]); if(c===a)break; c=prev.get(c);}
+  return out.reverse();
+}
+/* 닫힌 고리(o/O/0)는 최단경로가 성립하지 않으므로 링을 한 바퀴 순회 */
+function ringWalk(sk,mem,startIdx,secondPt){
+  const set=new Set(mem); const order=[]; const seen=new Set();
+  let cur=startIdx,prev=null,dir=null;
+  while(cur>=0&&!seen.has(cur)){
+    seen.add(cur); const cp=[cur%W,(cur/W)|0]; order.push(cp);
+    const cand=nbrs(sk,cur).map(n=>n[0]).filter(v=>set.has(v)&&!seen.has(v));
+    if(!cand.length)break;
+    let best=-1,bs=-1e9;
+    for(const v of cand){
+      const vx=v%W-cp[0], vy=((v/W)|0)-cp[1], L=Math.hypot(vx,vy)||1;
+      // 첫 걸음은 지정 방향으로, 이후는 직전 진행 방향을 최대한 유지 -> 분기에서 곁가지로 새지 않음
+      const sc = dir ? (vx/L*dir[0]+vy/L*dir[1])
+                     : -Math.hypot(v%W-secondPt[0], ((v/W)|0)-secondPt[1]);
+      if(sc>bs){bs=sc;best=v;} }
+    if(best<0)break;
+    if(dir && bs<0.2) break;                 // 90도 이상 꺾이면 고리를 벗어난 것
+    const bx=best%W-cp[0], by=((best/W)|0)-cp[1], BL=Math.hypot(bx,by)||1;
+    dir = dir ? [dir[0]*0.5+bx/BL*0.5, dir[1]*0.5+by/BL*0.5] : [bx/BL,by/BL];
+    const DL=Math.hypot(dir[0],dir[1])||1; dir=[dir[0]/DL,dir[1]/DL];
+    prev=cur; cur=best; }
+  if(order.length>2) order.push(order[0].slice());
+  return order;
+}
+/* 분기점에서 잠깐 곁길로 나갔다 돌아오는 잔주름을 잘라낸다 */
+function despike(p, gap, span){
+  const out=p.slice();
+  for(let i=0;i<out.length-2;i++){
+    for(let j=Math.min(out.length-1,i+40); j>i+2; j--){
+      if(Math.hypot(out[i][0]-out[j][0], out[i][1]-out[j][1])>gap) continue;
+      let L=0; for(let k=i+1;k<=j;k++) L+=Math.hypot(out[k][0]-out[k-1][0],out[k][1]-out[k-1][1]);
+      if(L<=span){ out.splice(i+1, j-i-1); break; }
+    }
+  }
+  return out;
+}
+
+function resample(p,step){
+  if(p.length<2)return p; const out=[p[0]]; let acc=0;
+  for(let i=1;i<p.length;i++){ let [x1,y1]=p[i-1],[x2,y2]=p[i];
+    let seg=Math.hypot(x2-x1,y2-y1);
+    while(acc+seg>=step){ const t=(step-acc)/seg;
+      const nx=x1+(x2-x1)*t,ny=y1+(y2-y1)*t; out.push([nx,ny]);
+      x1=nx;y1=ny;seg=Math.hypot(x2-x1,y2-y1);acc=0; }
+    acc+=seg; }
+  const last=p[p.length-1];
+  if(Math.hypot(out[out.length-1][0]-last[0],out[out.length-1][1]-last[1])>step*0.4) out.push(last);
+  else out[out.length-1]=last;
+  return out;
+}
+const totalTurn=(p)=>{ let t=0;
+  for(let i=1;i<p.length-1;i++){
+    const ax=p[i][0]-p[i-1][0],ay=p[i][1]-p[i-1][1];
+    const bx=p[i+1][0]-p[i][0],by=p[i+1][1]-p[i][1];
+    t+=Math.abs(Math.atan2(ax*by-ay*bx,ax*bx+ay*by)); }
+  return t; };
+/* RANSAC 직선 적합: 교차점 근처의 국소 휘어짐에 흔들리지 않는다 */
+function ransacLine(p){
+  let best=null,bn=-1;
+  for(let i=0;i<p.length;i++)for(let j=i+Math.floor(p.length*0.4);j<p.length;j++){
+    const dx=p[j][0]-p[i][0],dy=p[j][1]-p[i][1],L=Math.hypot(dx,dy);
+    if(L<4)continue; let n=0;
+    for(const q of p) if(Math.abs(dx*(p[i][1]-q[1])-(p[i][0]-q[0])*dy)/L<2.0) n++;
+    if(n>bn){bn=n;best=[p[i],[dx/L,dy/L]];} }
+  return best ? {origin:best[0], dir:best[1], ratio:bn/p.length} : null;
+}
+/* 모서리(w·z의 꺾임)는 보존하고 나머지만 완만하게 */
+function smooth(p,it){
+  const c=new Set([0,p.length-1]);
+  for(let i=2;i<p.length-2;i++){
+    const ax=p[i][0]-p[i-2][0],ay=p[i][1]-p[i-2][1];
+    const bx=p[i+2][0]-p[i][0],by=p[i+2][1]-p[i][1];
+    if(Math.abs(Math.atan2(ax*by-ay*bx,ax*bx+ay*by))>1.0) c.add(i); }
+  let q=p.map(v=>v.slice());
+  for(let k=0;k<it;k++){ const n=q.map(v=>v.slice());
+    for(let i=1;i<q.length-1;i++){ if(c.has(i))continue;
+      n[i][0]=(q[i-1][0]+2*q[i][0]+q[i+1][0])/4;
+      n[i][1]=(q[i-1][1]+2*q[i][1]+q[i+1][1])/4; }
+    q=n; }
+  return q;
+}
+/* 끝점이 잉크 밖이면 안쪽으로 당긴다 */
+function clampInk(b,pt,toward){
+  if(inkAt(b,pt[0],pt[1]))return pt;
+  const dx=toward[0]-pt[0],dy=toward[1]-pt[1],L=Math.hypot(dx,dy)||1;
+  for(let t=1;t<=Math.min(L,14);t++){ const x=pt[0]+dx/L*t,y=pt[1]+dy/L*t;
+    if(inkAt(b,x,y))return [x,y]; }
+  return null;                       // 근처에 잉크가 없으면 규칙 끝점을 버린다
+}
+
+/* 두 직선의 교점 — 꺾은선의 꼭짓점을 정확히 잡는다 */
+function meet(l1,l2){
+  const [o1,u1]=[l1.origin,l1.dir],[o2,u2]=[l2.origin,l2.dir];
+  const d=u1[0]*u2[1]-u1[1]*u2[0];
+  if(Math.abs(d)<1e-6) return null;
+  const t=((o2[0]-o1[0])*u2[1]-(o2[1]-o1[1])*u2[0])/d;
+  return [o1[0]+u1[0]*t, o1[1]+u1[1]*t];
+}
+const projOn=(l,q)=>{const t=(q[0]-l.origin[0])*l.dir[0]+(q[1]-l.origin[1])*l.dir[1];
+  return [l.origin[0]+l.dir[0]*t, l.origin[1]+l.dir[1]*t];};
+/* 스켈레톤 경로에서 규칙 꼭짓점에 가장 가까운 인덱스 */
+const nearIdx=(p,q)=>{let b=0,bd=1e9;
+  for(let i=0;i<p.length;i++){const d=(p[i][0]-q[0])**2+(p[i][1]-q[1])**2; if(d<bd){bd=d;b=i;}}
+  return b;};
+
+/* 폰트의 세로획·가로바는 완전히 축에 정렬돼 있다(L 아랫바 y=436.5 고정,
+   D 세로획 x=169.5 고정). 중심선에 남는 미세한 기울기는 교차점 아티팩트이므로
+   축 근처면 폰트에서 직접 잰 중앙값으로 못박는다. */
+function axisCenter(bin, seg, vertical){
+  const A=vertical?1:0, B=vertical?0:1;
+  const lo=Math.ceil(Math.min(seg[0][A],seg[seg.length-1][A]));
+  const hi=Math.floor(Math.max(seg[0][A],seg[seg.length-1][A]));
+  const at=(s)=>{ let best=null,bd=1e9;
+    for(const q of seg){ const d=Math.abs(q[A]-s); if(d<bd){bd=d;best=q;} }
+    return best?best[B]:null; };
+  const vals=[], wid=[];
+  for(let s=lo;s<=hi;s++){
+    const c=at(s); if(c==null) continue;
+    const hit=(u)=> vertical ? inkAt(bin,u,s) : inkAt(bin,s,u);
+    if(!hit(c)) continue;
+    let a=c,b=c;
+    while(hit(a-1)) a--;
+    while(hit(b+1)) b++;
+    vals.push((a+b)/2); wid.push(b-a+1);
+  }
+  if(!vals.length) return seg[0][B];
+  const sw=wid.slice().sort((x,y)=>x-y);
+  const base=sw[Math.floor(sw.length*0.25)];          // 교차점이 아닌 순수 획 두께
+  let keep=vals.filter((_,i)=>wid[i]<=base*1.5);
+  if(!keep.length) keep=vals;
+  keep=keep.slice().sort((x,y)=>x-y);
+  return keep[Math.floor(keep.length/2)];
+}
+/* 획 하나의 직선을 구한다 — 축 근처면 축에 정확히 맞춘다 */
+function fitLine(bin, seg, fallback){
+  const f=ransacLine(seg);
+  let dir=f?f.dir:null;
+  if(!dir){ const dx=fallback[1][0]-fallback[0][0], dy=fallback[1][1]-fallback[0][1];
+    const L=Math.hypot(dx,dy)||1; dir=[dx/L,dy/L]; }
+  const ang=Math.atan2(Math.abs(dir[1]),Math.abs(dir[0]));
+  if(ang>Math.PI/2-0.11) return {origin:[axisCenter(bin,seg,true), seg[0][1]], dir:[0,1]};
+  if(ang<0.11)           return {origin:[seg[0][0], axisCenter(bin,seg,false)], dir:[1,0]};
+  return f || {origin:seg[0].slice(), dir};
+}
+/* 한 자리에서 시작하는 획은 좌표를 완전히 일치시킨다.
+   중점으로 옮기면 곧은 획이 기울어지므로(D·P의 세로획이 대각선이 된다),
+   직선끼리는 교점을, 직선과 곡선은 직선 위로의 투영을 쓴다. */
+function unifyStarts(strokes, bin){
+  const starts=strokes.map(s=>s[0].slice());
+  const straight=strokes.map(s=>s.length===2);
+  const lineOf=(i)=>{ const q=strokes[i][0], r=strokes[i][1];
+    const dx=r[0]-q[0],dy=r[1]-q[1],L=Math.hypot(dx,dy)||1;
+    return {origin:q.slice(), dir:[dx/L,dy/L]}; };
+  const g=starts.map((_,i)=>i);
+  for(let i=0;i<starts.length;i++)for(let j=i+1;j<starts.length;j++){
+    const dx=Math.abs(starts[i][0]-starts[j][0]), dy=Math.abs(starts[i][1]-starts[j][1]);
+    const d=Math.hypot(dx,dy);
+    if(d<=22 || (d<=32 && (dy<=6||dx<=6))){
+      const a=g[i], b=g[j]; for(let k=0;k<g.length;k++) if(g[k]===b) g[k]=a; }
+  }
+  for(const key of new Set(g)){
+    const idx=g.map((v,i)=>v===key?i:-1).filter(i=>i>=0);
+    if(idx.length<2) continue;
+    const lines=idx.filter(i=>straight[i]);
+    const c=[0,0]; idx.forEach(i=>{c[0]+=starts[i][0];c[1]+=starts[i][1];});
+    const mid=[c[0]/idx.length, c[1]/idx.length];
+    let pt=null;
+    if(lines.length>=2) pt=meet(lineOf(lines[0]), lineOf(lines[1]));
+    if(!pt && lines.length>=1) pt=projOn(lineOf(lines[0]), mid);
+    if(!pt) pt=mid;
+    // 잉크 안으로 당긴다 (A의 꼭짓점처럼 교점이 글자 위로 조금 벗어날 수 있다)
+    if(!inkAt(bin, pt[0]/2, pt[1]/2)){
+      const dx=mid[0]-pt[0], dy=mid[1]-pt[1], L=Math.hypot(dx,dy)||1;
+      let ok=null;
+      for(let t=1;t<=Math.min(L,40);t++){
+        const q=[pt[0]+dx/L*t, pt[1]+dy/L*t];
+        if(inkAt(bin,q[0]/2,q[1]/2)){ ok=q; break; } }
+      if(!ok) continue; pt=ok;
+    }
+    const P=[Math.round(pt[0]), Math.round(pt[1])];
+    idx.forEach(i=>{ strokes[i][0]=P.slice(); });
+  }
+  return strokes;
+}
+
+/* 획 번호 자리 — 시작점 둘레를 훑어 글자에 닿지 않고
+   다른 번호와도 떨어진 자리를 고른다. 번호가 겹치면 몇 획인지 못 읽는다. */
+const BADGE_R=26, BADGE_GAP=2*BADGE_R+8, BADGE_EDGE=BADGE_R+4, CANVAS=560;
+function placeBadges(strokes, bin){
+  // 글자 바깥(테두리에서 이어지는 빈 곳)만 번호 자리로 쓴다.
+  // 안 그러면 a·b·o의 안쪽 구멍에 번호가 들어앉는다.
+  const outside=new Uint8Array(W*W);
+  { const st=[];
+    for(let i=0;i<W;i++){ st.push(i, (W-1)*W+i, i*W, i*W+W-1); }
+    while(st.length){ const u=st.pop();
+      if(outside[u]||bin[u]) continue; outside[u]=1;
+      const x=u%W,y=(u/W)|0;
+      if(x>0)st.push(u-1); if(x<W-1)st.push(u+1);
+      if(y>0)st.push(u-W); if(y<W-1)st.push(u+W); } }
+  const isOutside=(x,y)=>{ const xi=Math.round(x/2), yi=Math.round(y/2);
+    return xi>=0&&yi>=0&&xi<W&&yi<W&&!!outside[yi*W+xi]; };
+  const touches=(x,y)=>{ for(let dy=-BADGE_R-2;dy<=BADGE_R+2;dy+=3)
+      for(let dx=-BADGE_R-2;dx<=BADGE_R+2;dx+=3){
+        if(dx*dx+dy*dy>(BADGE_R+2)*(BADGE_R+2)) continue;
+        if(inkAt(bin,(x+dx)/2,(y+dy)/2)) return true; }
+    return false; };
+  const placed=[];
+  strokes.forEach((st)=>{
+    const s=st[0], nx=st[1]||st[0];
+    let dx=nx[0]-s[0], dy=nx[1]-s[1]; const dl=Math.hypot(dx,dy)||1; dx/=dl; dy/=dl;
+    let best=null, bs=1e9;
+    for(let rad=BADGE_R+16; rad<=BADGE_R+96 && !best; rad+=6){
+      for(let k=0;k<48;k++){
+        const ang=k/48*Math.PI*2;
+        const px=s[0]+Math.cos(ang)*rad, py=s[1]+Math.sin(ang)*rad;
+        if(px<BADGE_EDGE||py<BADGE_EDGE||px>CANVAS-BADGE_EDGE||py>CANVAS-BADGE_EDGE) continue;
+        if(!isOutside(px,py)) continue;      // 안쪽 구멍은 제외
+        if(touches(px,py)) continue;
+        let ok=true, near=0;
+        for(const q of placed){ const d=Math.hypot(px-q[0],py-q[1]);
+          if(d<BADGE_GAP){ok=false;break;} near=Math.max(near,200-d); }
+        if(!ok) continue;
+        const fwd=Math.cos(ang)*dx+Math.sin(ang)*dy;   // 획 진행 방향은 피한다
+        const sc=rad + Math.max(0,fwd)*90 + near*0.25;
+        if(sc<bs){bs=sc;best=[Math.round(px),Math.round(py)];}
+      }
+    }
+    placed.push(best || [Math.round(s[0]), Math.round(s[1]-BADGE_R-20)]);
+  });
+  return placed;
+}
+const BADGES={};
+
+const SPEC=window.SpellingBuilderStrokeSpec;
+const LET='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.split('');
+const notes=[];
+function build(){
+  const res={};
+  for(const ch of LET){
+    const spec=SPEC.letter(ch).strokes;
+    const ends=[]; spec.forEach(st=>{ ends.push([st[0][0]/2,st[0][1]/2],
+      [st[st.length-1][0]/2, st[st.length-1][1]/2]); });
+    const bin=render(ch), sk=prune(thin(bin), 14, ends), {lab,comps}=components(sk);
+    res[ch]=spec.map((st,si)=>{
+      const half=st.map(v=>[v[0]/2,v[1]/2]);            // 560 -> 280
+      const mid=half[Math.floor(half.length/2)];
+      // 이 획이 속한 연결 요소 (i·j의 점 / 몸통 구분)
+      let comp=null,cd=1e9;
+      comps.forEach(mem=>{ for(const u of mem){
+        const d=(u%W-mid[0])**2+(((u/W)|0)-mid[1])**2; if(d<cd){cd=d;comp=mem;} } });
+      const set=new Set(comp);
+      const snap=(x,y)=>{ let best=-1,bd=1e9;
+        for(const u of comp){ const d=(u%W-x)**2+(((u/W)|0)-y)**2;
+          if(d<bd){bd=d;best=u;} } return best; };
+      const a=half[0], z=half[half.length-1];
+      const closed=Math.hypot(a[0]-z[0],a[1]-z[1])<6 && half.length>6;
+      // 규칙 경로 길이에 비례해 웨이포인트를 깐다. 구간이 짧아야
+      // 최단경로가 줄기·가로획으로 질러가지 않는다.
+      let specLen=0;
+      for(let k=1;k<half.length;k++) specLen+=Math.hypot(half[k][0]-half[k-1][0],half[k][1]-half[k-1][1]);
+      const K=Math.max(2, Math.min(half.length, Math.ceil(specLen/18)+1));
+      const wp=[];
+      for(let k=0;k<K;k++){ const t=k/(K-1)*(half.length-1);
+        const i=Math.min(half.length-2,Math.floor(t)),f=t-i;
+        wp.push([half[i][0]+(half[i+1][0]-half[i][0])*f,
+                 half[i][1]+(half[i+1][1]-half[i][1])*f]); }
+      const sn=wp.map(w=>snap(w[0],w[1]));
+      let path=[];
+      for(let k=0;k<sn.length-1;k++){ if(sn[k]===sn[k+1])continue;
+        const seg=dijkstra(sk,sn[k],sn[k+1]);
+        if(!seg){path=null;break;}
+        path=path.length?path.concat(seg.slice(1)):seg; }
+      if(!path||path.length<2){ notes.push(ch+'#'+(si+1)+' 중심선 실패 — 규칙 좌표 유지'); return st; }
+      // 되돌아감 검사: 중심선이 규칙 경로보다 크게 길면 지름길·왕복이 생긴 것
+      let gotLen=0;
+      for(let k=1;k<path.length;k++) gotLen+=Math.hypot(path[k][0]-path[k-1][0],path[k][1]-path[k-1][1]);
+      if(gotLen > specLen*1.35+12) notes.push(ch+'#'+(si+1)+' 경로 왕복 의심 ('+Math.round(gotLen)+' vs 규칙 '+Math.round(specLen)+')');
+      let p=resample(despike(path,4,40),6);
+      // 형태 구분은 규칙이 갖고 있다: 2점=직선, 3~5점=꺾은선, 6점 이상=곡선.
+      // 폰트(중심선)는 그 형태의 방향과 자리만 정한다.
+      const kind = closed ? 'curve' : half.length===2 ? 'line'
+                 : half.length<=5 ? 'poly' : 'curve';
+      const endOf=(q,fb)=>inkAt(bin,q[0],q[1])?q:fb;
+      if(kind==='line'){
+        const fit=fitLine(bin, p, [a,z]);
+        p=[projOn(fit,endOf(a,p[0])), projOn(fit,endOf(z,p[p.length-1]))];
+      }else if(kind==='poly'){
+        // 규칙 꼭짓점으로 중심선을 잘라 구간마다 직선 적합 -> 인접 직선의 교점이 꼭짓점
+        const cut=half.map(v=>nearIdx(p,v));
+        const lines=[];
+        for(let k=0;k<cut.length-1;k++){
+          let i0=Math.min(cut[k],cut[k+1]), i1=Math.max(cut[k],cut[k+1]);
+          const pad=Math.floor((i1-i0)*0.18);           // 꼭짓점 부근은 제외하고 적합
+          const seg=p.slice(Math.min(i0+pad,i1-1), Math.max(i1-pad,i0+2)+1);
+          const f=seg.length>=4?fitLine(bin,seg,[half[k],half[k+1]]):null;
+          if(f){ lines.push(f); }
+          else { const dx=half[k+1][0]-half[k][0], dy=half[k+1][1]-half[k][1];
+                 const L=Math.hypot(dx,dy)||1;
+                 lines.push({origin:half[k].slice(), dir:[dx/L,dy/L], ratio:1}); }
+        }
+        const out=[projOn(lines[0], endOf(a,p[0]))];
+        for(let k=0;k<lines.length-1;k++){
+          const m=meet(lines[k],lines[k+1]);
+          out.push(m && inkAt(bin,m[0],m[1]) ? m : half[k+1].slice());
+        }
+        out.push(projOn(lines[lines.length-1], endOf(z,p[p.length-1])));
+        p=out;
+      }else{
+        p=smooth(p,10);
+        if(!closed){
+          const ea=clampInk(bin,a,p[1]||p[0]), ez=clampInk(bin,z,p[p.length-2]||p[p.length-1]);
+          if(ea) p[0]=ea; if(ez) p[p.length-1]=ez;
+          p=smooth(p,4);
+        }
+      }
+      if(!closed){
+        const ha=clampInk(bin,p[0],p[1]||p[0]);
+        const hz=clampInk(bin,p[p.length-1],p[p.length-2]||p[p.length-1]);
+        if(ha) p[0]=ha; else p=p.slice(1);
+        if(hz) p[p.length-1]=hz; else p=p.slice(0,-1);
+      }
+      if(p.length<2){ notes.push(ch+'#'+(si+1)+' 끝점 보정 실패 — 규칙 좌표 유지'); return st; }
+      return p.map(v=>[Math.round(v[0]*2),Math.round(v[1]*2)]);
+    });
+    res[ch]=unifyStarts(res[ch], bin);
+    BADGES[ch]=placeBadges(res[ch], bin);
+  }
+  return res;
+}
+// fonts.ready 는 '요청된' 폰트만 기다린다. 웹폰트를 직접 불러야 폴백으로 굽지 않는다.
+Promise.all([document.fonts.load('700 280px "SofiaProSoft"'),
+             document.fonts.load('700 280px "Lexend"')])
+  .then(()=>document.fonts.ready).then(()=>{
+  const res=build();
+  // 검증: 선밖 비율
+  let tot=0,out=0; const bad=[];
+  for(const ch of LET){ const bin=render(ch); let t=0,o=0;
+    for(const st of res[ch]) for(let i=0;i<st.length-1;i++){
+      const [x1,y1]=st[i],[x2,y2]=st[i+1];
+      const n=Math.max(1,Math.ceil(Math.hypot(x2-x1,y2-y1)/4));
+      for(let s=0;s<=n;s++){ const px=(x1+(x2-x1)*s/n)/2,py=(y1+(y2-y1)*s/n)/2;
+        t++; if(!inkAt(bin,px,py))o++; } }
+    tot+=t; out+=o; if(o/t>0.01) bad.push(ch+' '+(o/t*100).toFixed(1)+'%'); }
+  document.getElementById('log').textContent =
+    '생성 52자 · 선밖 '+(out/tot*100).toFixed(2)+'% · 이탈글자 ['+(bad.join(', ')||'없음')+']'
+    + (notes.length? ' · 비고: '+notes.join(' / ') : '');
+  const fmt=(p)=>p.map(v=>v[0]+' '+v[1]).join(' ');
+  const line=(ch)=>{ const key=/[A-Z]/.test(ch)?'"'+ch+'"':ch;
+    return '    '+key+': { s: ['+res[ch].map(p=>'"'+fmt(p)+'"').join(', ')
+      +'], o: ['+res[ch].map(p=>'"'+p[0][0]+' '+p[0][1]+'"').join(', ')
+      +'], b: ['+BADGES[ch].map(p=>'"'+p[0]+' '+p[1]+'"').join(', ')+'] },'; };
+  const order='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  document.getElementById('out').value = order.map(line).join('\n');
+  window.__badges=BADGES;
+  window.__built=res;
+});
+</script>

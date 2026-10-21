@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="theme-color" content="#5b3fc4" />
+    <meta name="description" content="빈칸에 들어갈 철자를 실로폰 건반에서 골라 단어를 완성하는 Spelling Builder 실로폰 단어 게임" />
+    <title>Spelling Builder - 실로폰 단어</title>
+    <!-- 함정 12: 본문의 같은 그림(key-note)과 주소가 같아야 한다. 버전을 올릴 때 두 자리를 함께 올린다. -->
+    <link rel="icon" href="assets/game/keyboard3_note.png?v=20261021-1" />
+    <link rel="stylesheet" href="styles.css?v=20261021-1" />
+  </head>
+  <body>
+    <main class="viewport">
+      <h1 class="sr-only">Spelling Builder 실로폰 단어</h1>
+      <section id="game-stage" class="game-stage" aria-label="빈칸 철자를 실로폰 건반에서 고르는 단어 게임">
+        <img class="background" src="assets/start/bg.png?v=20261021-1" alt="" />
+
+        <p id="status-toast" class="status-toast" role="status" aria-live="polite"></p>
+
+        <button
+          id="sound-button"
+          class="global-control sound-button"
+          type="button"
+          aria-label="소리 끄기"
+          aria-pressed="true"
+          hidden
+        >
+          <img id="sound-icon" src="assets/btn_sound_on.png?v=20261021-1" alt="" width="66" height="69" draggable="false" />
+        </button>
+
+        <button
+          id="navigation-button"
+          class="global-control navigation-button"
+          type="button"
+          aria-label="게임 닫기"
+          hidden
+        >
+          <img id="navigation-icon" src="assets/btn_close.png?v=20261021-1" alt="" width="66" height="69" draggable="false" />
+        </button>
+
+        <section id="start-screen" class="screen start-screen" aria-label="시작 화면" hidden>
+          <div id="start-effects" class="start-effects" aria-hidden="true"></div>
+          <img
+            class="start-logo"
+            src="assets/start/logo.png?v=20261021-1"
+            alt="Spelling Builder"
+            width="1501"
+            height="593"
+            draggable="false"
+          />
+
+          <!-- 2차 검수 공통-9: 동화 정보(API info 의 title · subtitle)를 로고와 Start 사이에 둔다. 받지 못하면 숨긴다. -->
+          <div id="start-story" class="start-story" role="group" aria-label="동화 정보" hidden>
+            <p id="start-story-title" class="start-story-title"></p>
+            <p id="start-story-subtitle" class="start-story-subtitle"></p>
+          </div>
+
+          <nav class="start-menu" aria-label="시작 메뉴">
+            <button id="start-button" class="start-menu-button start-menu-button-play" type="button" aria-busy="true" disabled>
+              <span>Start</span>
+            </button>
+          </nav>
+
+          <button id="help-button" class="start-help-button" type="button" aria-label="도움말" disabled>
+            <img src="assets/btn_help.png?v=20261021-1" alt="" width="62" height="63" draggable="false" />
+          </button>
+        </section>
+
+        <section
+          id="help-screen"
+          class="screen help-screen"
+          role="dialog"
+          aria-labelledby="help-screen-title"
+          hidden
+        >
+          <img class="help-background" src="assets/help/help_bg.png?v=20261021-1" alt="" width="1920" height="1080" draggable="false" />
+          <h2 id="help-screen-title" class="sr-only">도움말</h2>
+          <div class="help-content-viewport" tabindex="0">
+            <div id="help-content" class="help-content"></div>
+            <div id="help-status" class="help-status" role="status" aria-live="polite">
+              <span id="help-status-message">도움말을 불러오는 중입니다.</span>
+              <button id="help-retry-button" class="help-retry-button" type="button" hidden>Retry</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="play-screen" class="screen play-screen" aria-label="실로폰 단어 게임" hidden>
+          <img class="play-background" src="assets/game/bg.png?v=20261021-1" alt="" width="1920" height="1080" draggable="false" />
+
+          <div class="meaning-panel">
+            <img class="meaning-box" src="assets/game/text_box.png?v=20261021-1" alt="" width="745" height="170" draggable="false" />
+            <p id="word-meaning" class="meaning-text" aria-live="polite"><span id="word-meaning-text" class="meaning-text-inner"></span></p>
+          </div>
+
+          <div class="word-panel">
+            <img class="word-bar" src="assets/game/question_bg.png?v=20261021-1" alt="" width="1526" height="191" draggable="false" />
+            <div id="letter-row" class="letter-row" role="group" aria-label="단어 철자"></div>
+          </div>
+
+          <div class="xylophone">
+            <span class="xylophone-board" aria-hidden="true"></span>
+            <span class="xylophone-rod xylophone-rod-top" aria-hidden="true"></span>
+            <span class="xylophone-rod xylophone-rod-bottom" aria-hidden="true"></span>
+            <div class="key-field" role="group" aria-label="빈칸에 들어갈 철자를 고르세요">
+              <button id="key-0" class="key key-slot-0" type="button" data-key="0" data-skip-touch="true" disabled>
+                <img class="key-body" src="assets/game/keyboard0.png?v=20261021-1" alt="" width="180" height="521" draggable="false" />
+                <span class="key-face">
+                  <span class="key-letter"></span>
+                  <img class="key-note" src="assets/game/keyboard0_note.png?v=20261021-1" alt="" width="52" height="71" draggable="false" />
+                </span>
+              </button>
+              <button id="key-1" class="key key-slot-1" type="button" data-key="1" data-skip-touch="true" disabled>
+                <img class="key-body" src="assets/game/keyboard1.png?v=20261021-1" alt="" width="180" height="521" draggable="false" />
+                <span class="key-face">
+                  <span class="key-letter"></span>
+                  <img class="key-note" src="assets/game/keyboard1_note.png?v=20261021-1" alt="" width="52" height="71" draggable="false" />
+                </span>
+              </button>
+              <button id="key-2" class="key key-slot-2" type="button" data-key="2" data-skip-touch="true" disabled>
+                <img class="key-body" src="assets/game/keyboard2.png?v=20261021-1" alt="" width="179" height="521" draggable="false" />
+                <span class="key-face">
+                  <span class="key-letter"></span>
+                  <img class="key-note" src="assets/game/keyboard2_note.png?v=20261021-1" alt="" width="52" height="71" draggable="false" />
+                </span>
+              </button>
+              <button id="key-3" class="key key-slot-3" type="button" data-key="3" data-skip-touch="true" disabled>
+                <img class="key-body" src="assets/game/keyboard3.png?v=20261021-1" alt="" width="180" height="521" draggable="false" />
+                <span class="key-face">
+                  <span class="key-letter"></span>
+                  <img class="key-note" src="assets/game/keyboard3_note.png?v=20261021-1" alt="" width="52" height="71" draggable="false" />
+                </span>
+              </button>
+              <button id="key-4" class="key key-slot-4" type="button" data-key="4" data-skip-touch="true" disabled>
+                <img class="key-body" src="assets/game/keyboard4.png?v=20261021-1" alt="" width="180" height="521" draggable="false" />
+                <span class="key-face">
+                  <span class="key-letter"></span>
+                  <img class="key-note" src="assets/game/keyboard4_note.png?v=20261021-1" alt="" width="52" height="71" draggable="false" />
+                </span>
+              </button>
+              <button id="key-5" class="key key-slot-5" type="button" data-key="5" data-skip-touch="true" disabled>
+                <img class="key-body" src="assets/game/keyboard5.png?v=20261021-1" alt="" width="180" height="521" draggable="false" />
+                <span class="key-face">
+                  <span class="key-letter"></span>
+                  <img class="key-note" src="assets/game/keyboard5_note.png?v=20261021-1" alt="" width="52" height="71" draggable="false" />
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <img class="character is-idle" src="assets/game/char.png?v=20261021-1" alt="" width="194" height="260" draggable="false" />
+
+          <div class="gauge score-gauge">
+            <img class="gauge-ring" src="assets/game/ui_score_ring.png?v=20261021-1" alt="" width="268" height="268" draggable="false" />
+            <svg id="score-arc" class="gauge-arc score-arc" viewBox="0 0 100 100" aria-hidden="true" data-empty="true">
+              <circle cx="50" cy="50" r="42" pathLength="1000" stroke-dasharray="1000" stroke-dashoffset="1000" />
+            </svg>
+            <img class="gauge-cover" src="assets/game/ui_score_cover.png?v=20261021-1" alt="" width="179" height="179" draggable="false" />
+            <!-- "Score" 글자는 ui_score_cover.png에 각인돼 있어 따로 그리지 않는다. -->
+            <span class="gauge-readout score-readout">
+              <strong id="score-value" class="score-value" aria-label="점수 0">0</strong>
+            </span>
+            <!-- 검수 r36/r11: 정답 +100 · 오답 -10 점수 증감을 Score 게이지 안, 숫자 위에서 띄운다. -->
+            <div id="score-popups" class="score-popups" aria-hidden="true"></div>
+            <!-- 사장님 2026-10-02: 보너스 순간 점수 원 위로 떠오르는 "보너스 +100"(단어미로와 같다). -->
+            <span id="score-bonus" class="score-bonus" aria-hidden="true"></span>
+          </div>
+
+          <div class="gauge timer-gauge">
+            <img class="gauge-ring" src="assets/game/ui_timer_bg.png?v=20261021-1" alt="" width="266" height="267" draggable="false" />
+            <svg id="timer-arc" class="gauge-arc timer-arc" viewBox="0 0 100 100" aria-hidden="true" data-empty="true">
+              <circle cx="50" cy="50" r="42" pathLength="1000" stroke-dasharray="1000" stroke-dashoffset="1000" />
+            </svg>
+            <img class="gauge-cover" src="assets/game/ui_timer_cover.png?v=20261021-1" alt="" width="179" height="179" draggable="false" />
+            <span class="gauge-readout">
+              <strong id="progress-value" class="progress-value" aria-label="문항 진행">-/-</strong>
+              <strong id="time-value" class="time-value" aria-label="게임 준비 중">--:--</strong>
+            </span>
+          </div>
+
+          <!-- 2차 검수 SB3-4: 단어를 완성하거나 기회를 다 쓰면 단어카드를 띄운다(다른 Spelling Builder 방과 같은 answer-reveal).
+               글자 크기는 따라쓰기 단어카드 기준(SB공통-3). 게이지는 카드 위에 남는다. -->
+          <div id="answer-reveal" class="answer-reveal" aria-hidden="true" hidden>
+            <p id="word-reveal" class="answer-reveal-word"></p>
+          </div>
+          <p id="game-status" class="sr-only" aria-live="assertive"></p>
+        </section>
+
+        <section id="end-screen" class="end-screen" aria-label="게임 결과" aria-hidden="true">
+          <!-- 검수 9-2: 새로고침이 아니라 X 버튼이다. 점수 저장이 끝난 뒤 시작 화면으로 간다. -->
+          <button
+            id="result-exit-button"
+            class="result-exit-button"
+            type="button"
+            aria-label="시작 화면으로"
+          >
+            <img src="assets/btn_close.png?v=20261021-1" alt="" draggable="false" />
+          </button>
+
+          <img class="result-background" src="assets/result/bg_scene.png?v=20261021-1" alt="" draggable="false" />
+          <!-- 등급별 여우: 카드 뒤(배경 앞)에 두어 아래쪽이 카드에 가려진다.
+               배경과 같은 층이므로 배경 다음 · 카드 앞에 둔 이 순서가 층을 정한다.
+               초기 주소를 두지 않는다 — 등급이 정해지기 전에는 어떤 그림도 들어 있지
+               않아야 첫 판에서 엉뚱한 등급의 여우가 새어 나올 자리가 아예 없다.
+               스크립트가 등급을 정하면서 주소를 넣고 감춤을 푼다. -->
+          <img id="result-fox" class="result-fox" alt="" draggable="false" hidden />
+          <img class="result-layout" src="assets/result/bg.png?v=20261021-1" alt="" draggable="false" />
+          <canvas
+            id="result-particle-canvas"
+            class="result-particle-canvas"
+            width="1920"
+            height="1080"
+            aria-hidden="true"
+          ></canvas>
+          <img
+            id="result-title"
+            class="result-title"
+            src="assets/result/result_text1.png?v=20261021-1"
+            alt="Good"
+            draggable="false"
+          />
+
+          <!-- 검수 6항: 점수 합이 아니라 문항 개수다. Correct 는 맞힌 문제, Incorrect 는 오답노트 줄 수(3번 모두 틀린 문제,
+               2차 검수 공통-10). 2차 검수 공통-2: 숫자 뒤 '개' 와 Bonus 앞 '+' 는 없고, Bonus 뒤 '점' 은 CSS 가 붙인다. -->
+          <output id="result-correct-points" class="result-points result-points-correct" aria-label="정답 0개"><span id="result-correct-count" class="result-points-number">0</span></output>
+          <output id="result-incorrect-points" class="result-points result-points-incorrect" aria-label="오답 0개"><span id="result-incorrect-count" class="result-points-number">0</span></output>
+          <output id="result-bonus-points" class="result-points result-points-bonus" aria-label="보너스 점수 0점"><span id="result-bonus-count" class="result-points-number">0</span></output>
+
+          <!-- 2차 검수 SB공통-2: 순위 · 트로피 없이 점수만 가운데. 트로피 상자 그림(result_point_box.png)은 쓰지 않는다. -->
+          <div class="result-total" aria-label="내 점수">
+            <output id="result-total-score" class="result-total-score" aria-label="0점">
+              <span id="result-score-number" class="result-score-number">0</span>
+              <span class="result-score-unit">점</span>
+            </output>
+          </div>
+
+          <p id="result-message" class="result-message" role="status" aria-live="polite"></p>
+
+          <nav class="result-actions" aria-label="결과 화면 메뉴">
+            <button id="incorrect-answers-button" class="result-action" type="button" aria-label="오답 없음" disabled>
+              <img src="assets/result/btn1.png?v=20261021-1" alt="Incorrect Answers" draggable="false" />
+            </button>
+            <button id="try-again-button" class="result-action" type="button" aria-label="다시 하기">
+              <img src="assets/result/btn2.png?v=20261021-1" alt="Try Again" draggable="false" />
+            </button>
+          </nav>
+
+          <div id="incorrect-answer-dialog" class="incorrect-answer-dialog" hidden>
+            <button
+              id="incorrect-answer-backdrop"
+              class="incorrect-answer-backdrop"
+              type="button"
+              tabindex="-1"
+              aria-label="오답 목록 닫기"
+            ></button>
+
+            <section
+              class="incorrect-answer-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="incorrect-answer-dialog-title"
+            >
+              <h2 id="incorrect-answer-dialog-title" class="sr-only">Incorrect Answers</h2>
+              <img
+                class="incorrect-answer-background"
+                src="assets/incorrect-answer/bg_incorrect.png?v=20261021-1"
+                alt=""
+                width="1347"
+                height="980"
+                draggable="false"
+              />
+              <button
+                id="incorrect-answer-close-button"
+                class="incorrect-answer-close"
+                type="button"
+                aria-label="오답 목록 닫기"
+              >
+                <img
+                  src="assets/incorrect-answer/btn_close_popup.png?v=20261021-1"
+                  alt=""
+                  width="77"
+                  height="87"
+                  draggable="false"
+                />
+              </button>
+
+              <div class="incorrect-answer-table" role="table" aria-label="오답 목록">
+                <div class="incorrect-answer-header incorrect-answer-grid" role="row">
+                  <span role="columnheader"><span class="sr-only">발음</span></span>
+                  <span role="columnheader">단어</span>
+                  <span role="columnheader">뜻</span>
+                </div>
+                <div
+                  id="incorrect-answer-list"
+                  class="incorrect-answer-list"
+                  role="rowgroup"
+                  tabindex="0"
+                  aria-label="오답 단어 목록"
+                ></div>
+              </div>
+            </section>
+          </div>
+
+        </section>
+
+        <section id="loading-screen" class="loading-screen" aria-live="polite">
+          <div class="loading-card">
+            <span class="loading-spinner" aria-hidden="true"></span>
+            <h2 id="loading-title">게임 준비 중</h2>
+            <p id="loading-message">단어와 게임 정보를 불러오고 있습니다.</p>
+            <button id="retry-button" class="retry-button" type="button" hidden>다시 시도</button>
+          </div>
+        </section>
+      </section>
+
+      <!-- 2차 검수 공통-14: '가로 화면으로 돌려주세요' 안내는 뺐다. 세로에서도 무대가 폭에 맞춰 그대로 보이고 눌린다. -->
+      <noscript>이 게임을 실행하려면 브라우저에서 JavaScript를 허용해 주세요.</noscript>
+    </main>
+
+    <script id="gameConfig" type="application/json">
+      {
+        "schemaVersion": 2,
+        "deployment": {
+          "apiBaseUrl": "https://apis-review.littlefox.com",
+          "apiUserAgent": "LITTLEFOX_VOCA_WEB:desktop/1.0.0/browser/Web:unknown"
+        },
+        "timing": {
+          "totalDurationMs": 180000
+        },
+        "scoring": {
+          "correct": 50,
+          "incorrect": -10,
+          "comboEvery": 3,
+          "comboBonus": 100,
+          "chances": 3
+        },
+        "words": [
+          { "text": "auditorium", "mean": "대강당, 공연장" },
+          { "text": "melody",     "mean": "선율, 멜로디" },
+          { "text": "concert",    "mean": "음악회, 연주회" },
+          { "text": "rhythm",     "mean": "리듬, 박자" },
+          { "text": "orchestra",  "mean": "관현악단" },
+          { "text": "piano",      "mean": "피아노" },
+          { "text": "trumpet",    "mean": "트럼펫" },
+          { "text": "chorus",     "mean": "합창, 후렴" },
+          { "text": "stage",      "mean": "무대" },
+          { "text": "applause",   "mean": "박수갈채" },
+          { "text": "ticket",     "mean": "표, 입장권" },
+          { "text": "practice",   "mean": "연습하다" }
+        ]
+      }
+    </script>
+    <script src="api-client.js?v=20261021-1"></script>
+    <script src="content-loader.js?v=20261021-1"></script>
+    <script src="script.js?v=20261021-1"></script>
+  </body>
+</html>

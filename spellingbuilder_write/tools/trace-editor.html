@@ -1,0 +1,749 @@
+<!doctype html><meta charset="utf-8"><title>획 가이드 편집기</title>
+<link rel="stylesheet" href="../styles.css">
+<style>
+:root{--ink:#2f2a26;--line:#e4ded6;--brand:#ef8f18}
+*{box-sizing:border-box}
+body{margin:0;background:#faf7f2;color:var(--ink);
+  font:14px/1.55 -apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}
+header{padding:14px 18px;border-bottom:1px solid var(--line);background:#fff;
+  display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+h1{font-size:15px;margin:0;font-weight:700}
+.hint{color:#8a7f74;font-size:12px}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:18px;padding:18px;align-items:start}
+@media (max-width:1000px){.wrap{grid-template-columns:1fr}}
+.picker{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px}
+.picker button{width:30px;height:30px;border:1px solid var(--line);background:#fff;
+  border-radius:6px;cursor:pointer;font:600 13px/1 monospace;color:var(--ink)}
+.picker button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.picker button.edited{border-color:var(--brand);color:var(--brand)}
+.stage{position:relative;width:100%;max-width:620px;aspect-ratio:1;background:#fff;
+  border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.stage svg{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+.stage svg.panning{cursor:grabbing}
+.minimap{position:absolute;left:8px;bottom:8px;width:132px;height:132px;background:rgba(255,255,255,.94);
+  border:1px solid var(--line);border-radius:8px;overflow:hidden;cursor:crosshair;
+  box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.minimap svg{width:100%;height:100%;display:block}
+.zoombar{position:absolute;right:8px;bottom:8px;display:flex;gap:4px;align-items:center;
+  background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:8px;padding:3px 6px}
+.zoombar button{padding:2px 8px;min-width:26px}
+.zoombar span{font:600 12px/1 monospace;min-width:32px;text-align:center;color:#6b6158}
+.gimg{image-rendering:auto}
+.guide{fill:none;stroke:var(--brand);stroke-width:12;stroke-linecap:round;
+  stroke-dasharray:0.1 26;opacity:.85}
+.hit{fill:transparent;stroke:transparent;stroke-width:26;cursor:crosshair}
+.pt{fill:#fff;stroke:var(--brand);stroke-width:3;cursor:grab}
+.pt.end{fill:var(--brand)}
+.pt.bad{stroke:#d43b3b;fill:#ffe9e9}
+.pt.sel{fill:#12a150;stroke:#0d6b38;stroke-width:4}
+.badge{fill:var(--brand);stroke:#fff;stroke-width:3;cursor:grab}
+.badge.sel{stroke:#0d6b38;stroke-width:5}
+.selring{fill:none;stroke:#12a150;stroke-width:2;stroke-dasharray:6 5;pointer-events:none}
+.preview-tile{position:relative;width:100%;aspect-ratio:495/504;margin:0 0 8px;
+  border-radius:10px;overflow:visible}
+.preview-tile .trace-tile-bg{border-radius:10px}
+.preview-tile .trace-canvas{cursor:default;pointer-events:none}
+/* 미리보기 전용 안내 스타일 — 게임 styles.css 와 분리해 둔다.
+   보이는 모습은 게임과 같아야 하므로 값이 어긋나면 테스트가 잡는다. */
+.pv-path{fill:none;stroke:#ef8f18;stroke-width:12;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:0.1 26;opacity:.3;transition:opacity 220ms ease}
+.pv-path.is-active{opacity:1}
+.pv-start{fill:#fff;stroke:#ef8f18;stroke-width:6;opacity:.5;transition:opacity 200ms ease}
+.pv-start.is-active{fill:#ef8f18;stroke:#fff;opacity:1}
+.pv-badge{fill:#fff;stroke:#c97a12;stroke-width:5;opacity:.9;
+  transition:opacity 200ms ease, fill 200ms ease}
+.pv-badge.is-active{fill:#ef8f18;stroke:#fff;opacity:1}
+.pv-label{fill:#c97a12;font-family:"SofiaProSoft","Lexend",sans-serif;font-weight:700;
+  font-size:34px;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.pv-label.is-active{fill:#fff}
+/* 페이드 금지 — 끝나는 순간 원점(0,0)으로 되돌아가 모서리에서 깜빡인다 */
+.pv-runner{fill:#fff;stroke:#ef8f18;stroke-width:7;opacity:0}
+.pv-runner.is-active{opacity:1}
+
+.coord{font:12px/1.5 monospace;color:#6b6158;margin:-4px 0 10px}
+.coord b{color:var(--ink)}
+kbd{display:inline-block;padding:1px 5px;border:1px solid var(--line);border-bottom-width:2px;
+  border-radius:4px;background:#fff;font:600 11px/1.4 monospace}
+.badge-t{fill:#fff;font:700 22px sans-serif;text-anchor:middle;dominant-baseline:central;
+  pointer-events:none;user-select:none}
+aside{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}
+aside h2{font-size:13px;margin:0 0 8px}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+button.act{padding:6px 10px;border:1px solid var(--line);background:#fff;border-radius:7px;
+  cursor:pointer;font-size:12px;color:var(--ink)}
+button.act:hover{background:#faf6f0}
+button.act.warn{color:#b3421f;border-color:#f0d6cc}
+button.act.save{background:#12a150;border-color:#12a150;color:#fff;font-weight:700}
+button.act.save:hover{background:#0d8442}
+button.act[disabled]{opacity:.45;cursor:default}
+label.chk{display:flex;gap:6px;align-items:center;font-size:12px;color:#6b6158}
+textarea{width:100%;height:190px;font:11px/1.45 monospace;border:1px solid var(--line);
+  border-radius:8px;padding:8px;resize:vertical;background:#fdfcfa}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px}
+td{padding:2px 0}td:last-child{text-align:right;font-weight:600}
+.ok{color:#1a7f47}.ng{color:#c0392b}
+</style>
+<header>
+  <h1>획 가이드 편집기</h1>
+  <span class="hint">점이나 번호를 <b>눌러 고르고</b> <kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd> 로 1px씩 옮긴다
+    (<kbd>Shift</kbd> 10px). 끌어서 옮겨도 된다. 선을 <b>더블클릭</b>하면 점 추가,
+    <kbd>Alt</kbd>+클릭 또는 <kbd>Delete</kbd> 는 점 삭제, <kbd>Tab</kbd> 은 다음 점,
+    <kbd>Esc</kbd> 는 선택 해제. <kbd>Ctrl</kbd>+휠 또는 <kbd>+</kbd><kbd>−</kbd> 로 확대(<kbd>0</kbd> 맞춤), 휠·빈 곳 끌기로 이동. 확대하면 가장자리에 좌표 눈금과 미니맵이 뜬다. 고친 값은 브라우저에 남는다.</span>
+</header>
+<div class="wrap">
+  <div>
+    <div class="picker" id="picker"></div>
+    <div class="stage">
+      <svg id="sv" viewBox="0 0 560 560"></svg>
+      <div class="minimap" id="minimap" hidden>
+        <svg id="mini" viewBox="0 0 560 560"></svg>
+      </div>
+      <div class="zoombar">
+        <button class="act" id="zoomOut">−</button>
+        <span id="zoomLabel">1×</span>
+        <button class="act" id="zoomIn">+</button>
+        <button class="act" id="zoomFit">맞춤</button>
+      </div>
+    </div>
+  </div>
+  <aside>
+    <h2 id="title">—</h2>
+    <div class="coord" id="coord">고른 것 없음</div>
+    <table id="stat"></table>
+    <div class="row">
+      <button class="act" id="undo">되돌리기</button>
+      <button class="act warn" id="reset">이 글자 원래대로</button>
+      <button class="act warn" id="resetAll">전부 원래대로</button>
+    </div>
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="axis" checked> 곧은 획은 축에 고정</label>
+      <label class="chk"><input type="checkbox" id="share" checked> 같은 시작점 함께 이동</label>
+    </div>
+    <div class="row">
+      <label class="chk" style="flex:1">글자 투명도
+        <input type="range" id="alpha" min="0" max="100" value="45" style="flex:1">
+        <span id="alphaVal" style="min-width:34px;text-align:right;font:600 11px/1 monospace">45%</span>
+      </label>
+    </div>
+    <h2>게임 화면 — 고치는 대로 바뀐다</h2>
+    <div class="preview-tile">
+      <img class="trace-tile-bg" src="../assets/game/draw_panner.png" alt="" draggable="false">
+      <canvas class="trace-canvas" id="pvCanvas" width="560" height="560"></canvas>
+      <svg class="stroke-order" viewBox="0 0 560 560" aria-hidden="true">
+        <g id="pvg"></g>
+      </svg>
+    </div>
+    <div class="coord" id="pvMsg">1획이 끝나면 2획 — 밝은 점이 획을 시작→끝으로 훑는다. 게임에서 색칠을 시작하면 안내는 사라진다.</div>
+
+    <h2>trace-assets.js 에 반영</h2>
+    <div class="row">
+      <button class="act save" id="save">파일에 바로 저장</button>
+      <button class="act" id="pick">파일 다시 고르기</button>
+    </div>
+    <div class="coord" id="saveMsg">저장할 <b>app/trace-assets.js</b> 를 한 번 골라 두면
+      다음부터는 바로 저장된다.</div>
+    <div class="row">
+      <button class="act" id="copyOne">이 글자 줄 복사</button>
+      <button class="act" id="copyAll">52자 전부 복사</button>
+    </div>
+    <textarea id="out" readonly></textarea>
+  </aside>
+</div>
+<script src="../trace-assets.js?editor=1"></script>
+<script src="preview-guide.js?v=5"></script>
+<script>
+const A = window.SpellingBuilderTraceAssets;
+const ORDER = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const KEY = 'spellingbuilder.traceEdits.v1';
+const N = 560, FONT = '700 560px "SofiaProSoft", "Lexend", system-ui, sans-serif';
+
+const base = {};                                   // 파일에 구워진 값
+ORDER.forEach(ch => { const L = A.letter(ch);
+  base[ch] = { s: L.strokes.map(p => p.map(v => v.slice())), b: L.badges.map(v => v.slice()) }; });
+let edits = {};
+try { edits = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (_) { edits = {}; }
+const undoStack = [];
+let cur = 'a';
+let sel = null;                                    // {kind:'pt'|'badge', i, j}
+
+const data = (ch) => edits[ch] || base[ch];
+const clone = (d) => ({ s: d.s.map(p => p.map(v => v.slice())), b: d.b.map(v => v.slice()) });
+function commit(ch, d, prev) {
+  undoStack.push([ch, prev || clone(data(ch))]);
+  if (undoStack.length > 80) undoStack.shift();
+  if (JSON.stringify(d) === JSON.stringify(base[ch])) delete edits[ch];
+  else edits[ch] = d;
+  localStorage.setItem(KEY, JSON.stringify(edits));
+  draw(); paintPicker(); emit();
+}
+
+/* 글자 잉크 — 게임과 똑같이 바운딩박스로 중앙정렬한다.
+   판정용 마스크는 560 고정(자산 좌표계), 화면용 그림은 줌에 맞춰 다시 그린다. */
+const maskCv = document.createElement('canvas'); maskCv.width = maskCv.height = N;
+const mc = maskCv.getContext('2d');
+const dispCv = document.createElement('canvas');
+const dc = dispCv.getContext('2d');
+let mask = null, glyphURL = '', glyphRes = 0;
+
+function inkOffset(ch) {
+  const paint = (ox, oy) => { mc.clearRect(0, 0, N, N); mc.fillStyle = '#000';
+    mc.textAlign = 'center'; mc.textBaseline = 'middle'; mc.font = FONT;
+    mc.fillText(ch, N / 2 + ox, N / 2 + oy); return mc.getImageData(0, 0, N, N).data; };
+  const d = paint(0, 0);
+  let mnx = N, mny = N, mxx = -1, mxy = -1;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (d[(y * N + x) * 4 + 3] > 128) {
+    if (x < mnx) mnx = x; if (x > mxx) mxx = x; if (y < mny) mny = y; if (y > mxy) mxy = y; }
+  const ox = N / 2 - (mnx + mxx) / 2, oy = N / 2 - (mny + mxy) / 2;
+  mask = paint(ox, oy);
+  return [ox, oy];
+}
+function renderGlyph(ch) {
+  const [ox, oy] = inkOffset(ch);
+  paintDisplay(ch, ox, oy);
+  paintPreviewGlyph(ch, ox, oy);
+  glyphOffset = [ox, oy]; glyphChar = ch;
+}
+/* 게임은 글자를 #fdfcf7 로 깔아 두고 그 안을 칠하게 한다(script.js BASE_COLOR).
+   미리보기도 같은 색·같은 자리여야 안내선이 글자 위에 맞는지 보인다. */
+function paintPreviewGlyph(ch, ox, oy) {
+  const cv = document.getElementById('pvCanvas');
+  if (!cv) return;
+  const c = cv.getContext('2d');
+  c.clearRect(0, 0, N, N);
+  c.fillStyle = '#fdfcf7';
+  c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = FONT;
+  c.fillText(ch, N / 2 + ox, N / 2 + oy);
+}
+let glyphOffset = [0, 0], glyphChar = 'a';
+function paintDisplay(ch, ox, oy) {
+  // 8배까지 확대해도 글자 경계가 뭉개지지 않게 줌에 맞춰 해상도를 올린다
+  const res = N * Math.min(8, Math.max(1, Math.pow(2, Math.ceil(Math.log2(560 / view.w)))));
+  if (res === glyphRes && ch === glyphChar && glyphURL) return;
+  glyphRes = res;
+  dispCv.width = dispCv.height = res;
+  const k = res / N;
+  dc.clearRect(0, 0, res, res); dc.fillStyle = '#9c9186';
+  dc.textAlign = 'center'; dc.textBaseline = 'middle';
+  dc.font = '700 ' + res + 'px "SofiaProSoft", "Lexend", system-ui, sans-serif';
+  dc.fillText(ch, res / 2 + ox * k, res / 2 + oy * k);
+  glyphURL = dispCv.toDataURL();
+}
+const inInk = (x, y) => { const xi = Math.round(x), yi = Math.round(y);
+  return !(xi < 0 || yi < 0 || xi >= N || yi >= N) && mask[(yi * N + xi) * 4 + 3] > 128; };
+
+/* 보이는 범위 — 1px 눈금을 실제로 짚으려면 확대가 필요하다 */
+const view = { x: 0, y: 0, w: N, h: N };
+/* 글자가 불투명하면 제도판 눈금을 덮어 1px 자리를 못 짚는다 */
+const ALPHA_KEY = 'spellingbuilder.glyphAlpha.v1';
+let glyphAlpha = Number(localStorage.getItem(ALPHA_KEY) ?? 0.45);
+if (!(glyphAlpha >= 0 && glyphAlpha <= 1)) glyphAlpha = 0.45;
+const zoomOf = () => N / view.w;
+function setView(x, y, w) {
+  w = Math.max(N / 16, Math.min(N, w));
+  view.w = view.h = w;
+  view.x = Math.max(-w * 0.15, Math.min(N - w * 0.85, x));
+  view.y = Math.max(-w * 0.15, Math.min(N - w * 0.85, y));
+  sv.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${view.h}`);
+  document.getElementById('zoomLabel').textContent =
+    (zoomOf() < 1.05 ? 1 : Math.round(zoomOf() * 10) / 10) + '×';
+  paintDisplay(glyphChar, glyphOffset[0], glyphOffset[1]);
+  draw();
+}
+const zoomAt = (cx, cy, factor) => {
+  const w = Math.max(N / 16, Math.min(N, view.w / factor));
+  setView(cx - (cx - view.x) * (w / view.w), cy - (cy - view.y) * (w / view.w), w);
+};
+
+/* 화면 */
+const sv = document.getElementById('sv');
+const NS = 'http://www.w3.org/2000/svg';
+const el = (t, a) => { const n = document.createElementNS(NS, t);
+  for (const k in a) n.setAttribute(k, a[k]); return n; };
+
+/* 1px 눈금 제도판.
+   선 굵기는 화면에서 일정하게 보이도록 확대율로 나누되, 최소 굵기를 보장한다.
+   글자 '위에' 얹는다 — 아래에 깔면 글자에 가려 정작 필요한 자리에서 안 보인다.
+   1px 눈금은 촘촘해서 확대할수록 진해지게 한다. */
+function graphPaper() {
+  const px = (sv.getBoundingClientRect().width || 560) / view.w;   // 화면 px / 단위
+  const u = (wpx) => Math.max(0.4, wpx) / px;                      // 화면 굵기 -> 단위 굵기
+  const fine = Math.max(0, Math.min(1, (zoomOf() - 1.5) / 2.5));
+  const defs = el('defs', {});
+  const mk = (id, step, color, wpx, op) => {
+    const pat = el('pattern', { id, width: step, height: step, patternUnits: 'userSpaceOnUse' });
+    pat.appendChild(el('path', { d: `M${step} 0V${step}M0 ${step}H${step}`,
+      fill: 'none', stroke: color, 'stroke-width': u(wpx), opacity: op }));
+    defs.appendChild(pat);
+  };
+  if (fine > 0.02) mk('gp1', 1, '#a8977c', 1, 0.55 * fine);
+  mk('gp10', 10, '#9c8a6d', 1, 0.75);
+  mk('gp50', 50, '#7d6b4f', 1.4, 0.9);
+  sv.appendChild(defs);
+  const m = view.w * 0.1;
+  const box = { x: view.x - m, y: view.y - m, width: view.w + m * 2, height: view.h + m * 2 };
+  if (fine > 0.02) sv.appendChild(el('rect', { ...box, fill: 'url(#gp1)' }));
+  sv.appendChild(el('rect', { ...box, fill: 'url(#gp10)' }));
+  sv.appendChild(el('rect', { ...box, fill: 'url(#gp50)' }));
+  // 타일 경계와 한가운데 십자
+  sv.appendChild(el('rect', { x: 0, y: 0, width: N, height: N, fill: 'none',
+    stroke: '#5a4a33', 'stroke-width': u(1.6), opacity: 0.75 }));
+  [[N / 2, 0, N / 2, N], [0, N / 2, N, N / 2]].forEach(([x1, y1, x2, y2]) =>
+    sv.appendChild(el('line', { x1, y1, x2, y2, stroke: '#5a4a33',
+      'stroke-width': u(1), opacity: 0.5,
+      'stroke-dasharray': `${u(6) * 6} ${u(6) * 5}` })));
+}
+
+/* 가장자리 눈금 좌표. 확대하면 어디를 보고 있는지 이것 없이는 알 수 없다. */
+function rulers() {
+  const px = (sv.getBoundingClientRect().width || 560) / view.w;
+  const k = 1 / px;                                  // 화면 1px = 몇 단위
+  const step = view.w > 300 ? 100 : view.w > 140 ? 50 : view.w > 60 ? 20 : 10;
+  const pad = 15 * k, fs = 11 * k;
+  const band = (x, y, w, h) => sv.appendChild(el('rect', { x, y, width: w, height: h,
+    fill: '#fffdf9', opacity: 0.86 }));
+  band(view.x, view.y, view.w, pad + 3 * k);
+  band(view.x, view.y, pad + 20 * k, view.h);
+  const lab = (x, y, t, anchor) => {
+    const n = el('text', { x, y, fill: '#7d6b4f', 'font-size': fs,
+      'font-family': 'monospace', 'font-weight': 700, 'text-anchor': anchor,
+      'dominant-baseline': 'central' });
+    n.textContent = t; sv.appendChild(n);
+  };
+  const from = Math.ceil(view.x / step) * step, to = view.x + view.w;
+  for (let x = from; x <= to; x += step) {
+    sv.appendChild(el('line', { x1: x, y1: view.y, x2: x, y2: view.y + 6 * k,
+      stroke: '#7d6b4f', 'stroke-width': k, opacity: 0.8 }));
+    lab(x + 2 * k, view.y + 9 * k, String(x), 'start');
+  }
+  const fromY = Math.ceil(view.y / step) * step, toY = view.y + view.h;
+  for (let y = fromY; y <= toY; y += step) {
+    sv.appendChild(el('line', { x1: view.x, y1: y, x2: view.x + 6 * k, y2: y,
+      stroke: '#7d6b4f', 'stroke-width': k, opacity: 0.8 }));
+    lab(view.x + 9 * k, y + 7 * k, String(y), 'start');
+  }
+}
+
+/* 미니맵 — 글자 전체에서 지금 보는 창이 어디인지, 눌러서 바로 옮긴다 */
+const mini = document.getElementById('mini');
+function drawMini() {
+  const box = document.getElementById('minimap');
+  if (zoomOf() < 1.2) { box.hidden = true; return; }
+  box.hidden = false;
+  mini.textContent = '';
+  mini.appendChild(el('rect', { x: 0, y: 0, width: N, height: N, fill: '#fff' }));
+  if (glyphURL) mini.appendChild(el('image', { href: glyphURL, x: 0, y: 0,
+    width: N, height: N, opacity: 0.5 })).setAttributeNS(
+      'http://www.w3.org/1999/xlink', 'href', glyphURL);
+  const d = data(cur);
+  d.s.forEach(pts => mini.appendChild(el('path', {
+    d: pts.map((p, i) => (i ? 'L' : 'M') + p[0] + ',' + p[1]).join(' '),
+    fill: 'none', stroke: '#ef8f18', 'stroke-width': 14, 'stroke-linecap': 'round',
+    opacity: 0.55 })));
+  const p = selPoint(d);
+  if (p) mini.appendChild(el('circle', { cx: p[0], cy: p[1], r: 16, fill: '#12a150' }));
+  mini.appendChild(el('rect', { x: view.x, y: view.y, width: view.w, height: view.h,
+    fill: 'none', stroke: '#c0392b', 'stroke-width': 8 }));
+}
+{
+  const box = document.getElementById('minimap');
+  const jump = (ev) => { const r = mini.getBoundingClientRect();
+    const x = (ev.clientX - r.left) / r.width * N, y = (ev.clientY - r.top) / r.height * N;
+    setView(x - view.w / 2, y - view.h / 2, view.w); };
+  box.addEventListener('pointerdown', (ev) => { ev.preventDefault(); ev.stopPropagation(); jump(ev);
+    const mv = (e) => jump(e);
+    const up = () => { window.removeEventListener('pointermove', mv);
+      window.removeEventListener('pointerup', up); };
+    window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); });
+}
+/* 고른 자리가 화면 밖이면 따라간다 — Tab 으로 넘길 때 길을 잃지 않는다 */
+function ensureVisible(p) {
+  if (!p) return;
+  const pad = view.w * 0.18;
+  let x = view.x, y = view.y;
+  if (p[0] < view.x + pad) x = p[0] - pad;
+  if (p[0] > view.x + view.w - pad) x = p[0] - view.w + pad;
+  if (p[1] < view.y + pad) y = p[1] - pad;
+  if (p[1] > view.y + view.h - pad) y = p[1] - view.h + pad;
+  if (x !== view.x || y !== view.y) setView(x, y, view.w);
+}
+
+/* 게임 화면 미리보기 — 편집기 전용 preview-guide.js 를 쓴다.
+   게임(app/stroke-guide.js)과는 완전히 분리돼 있다. 한쪽을 고치다 다른 쪽이
+   깨지지 않게 하기 위해서다. 보이는 값이 어긋나면 테스트가 잡는다. */
+const PreviewGuide = window.TraceEditorPreviewGuide;
+let pvGuide = null, pvTimer = 0;
+function drawPreview() {
+  const g = document.getElementById('pvg');
+  if (!g || !PreviewGuide) return;
+  // 방향키를 누를 때마다 다시 만들면 순환이 1획으로 계속 되돌아간다. 조금 모아서 그린다.
+  clearTimeout(pvTimer);
+  pvTimer = setTimeout(() => {
+    if (pvGuide) pvGuide.destroy();
+    pvGuide = PreviewGuide.create(g, data(cur));
+    if (pvGuide) pvGuide.start();
+  }, 220);
+}
+
+function draw() {
+  const d = data(cur);
+  const k = view.w / N;                       // 사용자 단위 / 화면 배율
+  sv.textContent = '';
+  if (glyphURL) sv.appendChild(el('image', { class: 'gimg', href: glyphURL,
+    x: 0, y: 0, width: N, height: N, opacity: glyphAlpha })).setAttributeNS(
+      'http://www.w3.org/1999/xlink', 'href', glyphURL);
+  graphPaper();
+  d.s.forEach((pts, si) => {
+    const dd = pts.map((p, i) => (i ? 'L' : 'M') + p[0] + ',' + p[1]).join(' ');
+    sv.appendChild(el('path', { class: 'guide', d: dd }));
+    const hit = el('path', { class: 'hit', d: dd, 'stroke-width': 26 * k });
+    hit.addEventListener('dblclick', (ev) => insertPoint(ev, si));
+    sv.appendChild(hit);
+  });
+  const isSel = (kind, i, j) => sel && sel.kind === kind && sel.i === i && sel.j === j;
+  d.s.forEach((pts, si) => pts.forEach((p, pi) => {
+    const c = el('circle', { class: 'pt' + (pi === 0 || pi === pts.length - 1 ? ' end' : '')
+      + (inInk(p[0], p[1]) ? '' : ' bad') + (isSel('pt', si, pi) ? ' sel' : ''),
+      cx: p[0], cy: p[1], r: 9 * k, 'stroke-width': (isSel('pt', si, pi) ? 4 : 3) * k });
+    c.addEventListener('pointerdown', (ev) => startDrag(ev, 'pt', si, pi));
+    sv.appendChild(c); }));
+  d.b.forEach((p, bi) => {
+    const c = el('circle', { class: 'badge' + (isSel('badge', bi, 0) ? ' sel' : ''),
+      cx: p[0], cy: p[1], r: 26 });
+    c.addEventListener('pointerdown', (ev) => startDrag(ev, 'badge', bi, 0));
+    sv.appendChild(c);
+    sv.appendChild(el('text', { class: 'badge-t', x: p[0], y: p[1] })).textContent = String(bi + 1);
+  });
+  if (zoomOf() > 1.2) rulers();
+  drawMini();
+  drawPreview();
+  if (sel) {                                         // 고른 자리를 눈에 띄게
+    const p = selPoint(d);
+    if (p) sv.appendChild(el('circle', { class: 'selring', cx: p[0], cy: p[1],
+      r: (sel.kind === 'badge' ? 34 : 18) * k, 'stroke-width': 2 * k,
+      'stroke-dasharray': `${6 * k} ${5 * k}` }));
+  }
+  stats();
+}
+
+const toSvg = (ev) => { const r = sv.getBoundingClientRect();
+  return [ view.x + (ev.clientX - r.left) / r.width * view.w,
+           view.y + (ev.clientY - r.top) / r.height * view.h ]; };
+
+/* 고른 자리의 좌표 */
+function selPoint(d) {
+  if (!sel) return null;
+  if (sel.kind === 'badge') return d.b[sel.i];
+  return d.s[sel.i] && d.s[sel.i][sel.j];
+}
+
+/* 한 자리를 (x, y)로 옮긴다 — 드래그와 방향키가 같은 규칙을 쓴다.
+   축 고정: 곧은 획을 가로지르는 방향으로 옮기면 획 전체가 따라간다.
+            (한쪽 끝만 옮기면 수직이던 획이 대각선이 된다)
+   시작점 동반: 같은 자리에서 시작하던 획들은 함께 움직인다. */
+function applyMove(d, kind, i, j, x, y) {
+  x = Math.max(0, Math.min(N, Math.round(x)));
+  y = Math.max(0, Math.min(N, Math.round(y)));
+  if (kind === 'badge') { d.b[i] = [x, y]; return; }
+  const pts = d.s[i];
+  const was0 = pts[0].slice();
+  const lock = document.getElementById('axis').checked && pts.length === 2;
+  const o = 1 - j;
+  if (lock && Math.abs(pts[0][0] - pts[1][0]) <= 2) {        // 수직 획
+    pts[j] = [x, y]; pts[o] = [x, pts[o][1]];
+  } else if (lock && Math.abs(pts[0][1] - pts[1][1]) <= 2) { // 수평 획
+    pts[j] = [x, y]; pts[o] = [pts[o][0], y];
+  } else {
+    pts[j] = [x, y];
+  }
+  if (document.getElementById('share').checked
+      && (pts[0][0] !== was0[0] || pts[0][1] !== was0[1])) {
+    d.s.forEach((q, k) => { if (k !== i && q[0][0] === was0[0] && q[0][1] === was0[1])
+      q[0] = pts[0].slice(); });
+  }
+}
+
+function dropPoint(d, i, j) {                               // 점 삭제 (최소 2점은 남긴다)
+  if (d.s[i].length <= 2) return false;
+  d.s[i].splice(j, 1);
+  sel = { kind: 'pt', i, j: Math.min(j, d.s[i].length - 1) };
+  return true;
+}
+
+function startDrag(ev, kind, i, j) {
+  ev.preventDefault();
+  const before = clone(data(cur));
+  const d = clone(data(cur));
+  if (kind === 'pt' && ev.altKey) {                         // Alt+클릭 = 점 삭제
+    if (dropPoint(d, i, j)) commit(cur, d, before);
+    return;
+  }
+  sel = { kind, i, j };
+  let moved = false;
+  const move = (e) => { moved = true;
+    const [x, y] = toSvg(e); applyMove(d, kind, i, j, x, y); live(d); };
+  const up = () => { window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', up);
+    if (moved) commit(cur, d, before); else { draw(); }
+  };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', up);
+}
+function live(d) { edits[cur] = d; draw(); }
+
+/* 방향키로 1px씩 (Shift 10px). 고른 자리가 있어야 먹는다. */
+const NUDGE = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+window.addEventListener('keydown', (ev) => {
+  const tag = (ev.target.tagName || '').toLowerCase();
+  if (tag === 'textarea' || tag === 'input') return;
+  if (ev.key === 'Escape') { sel = null; draw(); return; }
+  if (ev.key === '+' || ev.key === '=') { ev.preventDefault(); zoomToSel(2); return; }
+  if (ev.key === '-' || ev.key === '_') { ev.preventDefault(); zoomToSel(0.5); return; }
+  if (ev.key === '0') { ev.preventDefault(); setView(0, 0, N); return; }
+  if (ev.key === 'Tab') {                                   // 다음 점으로
+    ev.preventDefault(); cycleSel(ev.shiftKey ? -1 : 1); return; }
+  if (!sel) return;
+  if (ev.key === 'Delete' || ev.key === 'Backspace') {
+    if (sel.kind !== 'pt') return;
+    ev.preventDefault();
+    const before = clone(data(cur)); const d = clone(data(cur));
+    if (dropPoint(d, sel.i, sel.j)) commit(cur, d, before);
+    return;
+  }
+  const v = NUDGE[ev.key];
+  if (!v) return;
+  ev.preventDefault();
+  const step = ev.shiftKey ? 10 : 1;
+  const before = clone(data(cur));
+  const d = clone(data(cur));
+  const p = selPoint(d); if (!p) return;
+  applyMove(d, sel.kind, sel.i, sel.j, p[0] + v[0] * step, p[1] + v[1] * step);
+  commit(cur, d, before);
+  ensureVisible(selPoint(data(cur)));
+});
+/* Tab 으로 점 -> 번호 순서대로 돈다 */
+function cycleSel(dir) {
+  const d = data(cur);
+  const all = [];
+  d.s.forEach((pts, i) => pts.forEach((_, j) => all.push({ kind: 'pt', i, j })));
+  d.b.forEach((_, i) => all.push({ kind: 'badge', i, j: 0 }));
+  if (!all.length) return;
+  let at = sel ? all.findIndex(a => a.kind === sel.kind && a.i === sel.i && a.j === sel.j) : -1;
+  at = (at + dir + all.length * 2) % all.length;
+  sel = all[at];
+  draw();
+  ensureVisible(selPoint(data(cur)));
+}
+/* 빈 곳: 끌면 화면 이동, 그냥 누르면 선택 해제 */
+sv.addEventListener('pointerdown', (ev) => {
+  if (ev.target !== sv && !ev.target.classList.contains('gimg')
+      && ev.target.tagName !== 'rect' && ev.target.tagName !== 'line') return;
+  ev.preventDefault();
+  const s0 = toSvg(ev); let moved = false;
+  sv.classList.add('panning');
+  const move = (e) => { const p = toSvg(e);
+    if (!moved && Math.hypot(p[0] - s0[0], p[1] - s0[1]) < view.w * 0.01) return;
+    moved = true;
+    setView(view.x - (p[0] - s0[0]), view.y - (p[1] - s0[1]), view.w); };
+  const up = () => { window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', up); sv.classList.remove('panning');
+    if (!moved) { sel = null; draw(); } };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', up);
+});
+/* 휠: Ctrl(⌘)/Alt 면 확대, Shift 면 좌우 이동, 그냥이면 위아래 이동.
+   확대 상태에서 맨 휠이 페이지를 스크롤해 버리면 자리를 잃는다. */
+sv.addEventListener('wheel', (ev) => {
+  if (ev.ctrlKey || ev.metaKey || ev.altKey) {
+    ev.preventDefault();
+    const [cx, cy] = toSvg(ev);
+    zoomAt(cx, cy, ev.deltaY < 0 ? 1.18 : 1 / 1.18);
+    return;
+  }
+  if (zoomOf() < 1.05) return;                       // 다 보이면 페이지 스크롤에 맡긴다
+  ev.preventDefault();
+  const d = (ev.deltaY || 0) / 320 * view.w;
+  const dx = (ev.deltaX || 0) / 320 * view.w;
+  if (ev.shiftKey) setView(view.x + d, view.y, view.w);
+  else setView(view.x + dx, view.y + d, view.w);
+}, { passive: false });
+document.getElementById('zoomIn').addEventListener('click',
+  () => zoomAt(view.x + view.w / 2, view.y + view.h / 2, 2));
+document.getElementById('zoomOut').addEventListener('click',
+  () => zoomAt(view.x + view.w / 2, view.y + view.h / 2, 0.5));
+document.getElementById('zoomFit').addEventListener('click', () => setView(0, 0, N));
+/* 고른 자리로 확대해 들어간다 */
+function zoomToSel(factor) {
+  const p = selPoint(data(cur)); if (!p) return;
+  const w = Math.max(N / 16, Math.min(N, view.w / factor));
+  setView(p[0] - w / 2, p[1] - w / 2, w);
+}
+
+function insertPoint(ev, si) {
+  const [x, y] = toSvg(ev);
+  const d = clone(data(cur)); const pts = d.s[si];
+  let best = 1, bd = 1e9;
+  for (let i = 1; i < pts.length; i++) {
+    const [ax, ay] = pts[i - 1], [bx, by] = pts[i];
+    const L = Math.hypot(bx - ax, by - ay) || 1;
+    const t = Math.max(0, Math.min(1, ((x - ax) * (bx - ax) + (y - ay) * (by - ay)) / (L * L)));
+    const dist = Math.hypot(ax + (bx - ax) * t - x, ay + (by - ay) * t - y);
+    if (dist < bd) { bd = dist; best = i; } }
+  pts.splice(best, 0, [Math.round(x), Math.round(y)]);
+  commit(cur, d);
+}
+
+function stats() {
+  const d = data(cur); let n = 0, out = 0;
+  d.s.forEach(pts => { for (let i = 0; i < pts.length - 1; i++) {
+    const [x1, y1] = pts[i], [x2, y2] = pts[i + 1];
+    const k = Math.max(1, Math.ceil(Math.hypot(x2 - x1, y2 - y1) / 3));
+    for (let s = 0; s <= k; s++) { n++;
+      if (!inInk(x1 + (x2 - x1) * s / k, y1 + (y2 - y1) * s / k)) out++; } } });
+  let tight = 0;
+  for (let i = 0; i < d.b.length; i++) for (let j = i + 1; j < d.b.length; j++)
+    if (Math.hypot(d.b[i][0] - d.b[j][0], d.b[i][1] - d.b[j][1]) < 52) tight++;
+  const pct = n ? (out / n * 100) : 0;
+  document.getElementById('title').textContent =
+    `${cur} — ${d.s.length}획 · ${d.s.reduce((a, p) => a + p.length, 0)}점`;
+  const sp = selPoint(d);
+  document.getElementById('coord').innerHTML = sel && sp
+    ? (sel.kind === 'badge' ? `번호 <b>${sel.i + 1}</b>` : `${sel.i + 1}획 ${sel.j + 1}번째 점`)
+      + ` — <b>${sp[0]}, ${sp[1]}</b>　방향키 1px · Shift 10px`
+    : '점이나 번호를 눌러 고르면 방향키로 옮길 수 있다';
+  document.getElementById('stat').innerHTML =
+    `<tr><td>선이 글자 밖으로</td><td class="${pct ? 'ng' : 'ok'}">${pct.toFixed(1)}%</td></tr>` +
+    `<tr><td>번호끼리 겹침</td><td class="${tight ? 'ng' : 'ok'}">${tight}건</td></tr>` +
+    `<tr><td>고친 글자</td><td>${Object.keys(edits).length} / 52</td></tr>`;
+}
+
+const line = (ch) => { const d = data(ch); const key = /[A-Z]/.test(ch) ? '"' + ch + '"' : ch;
+  const f = (p) => p.map(v => v[0] + ' ' + v[1]).join(' ');
+  return '    ' + key + ': { s: [' + d.s.map(p => '"' + f(p) + '"').join(', ')
+    + '], o: [' + d.s.map(p => '"' + p[0][0] + ' ' + p[0][1] + '"').join(', ')
+    + '], b: [' + d.b.map(p => '"' + p[0] + ' ' + p[1] + '"').join(', ') + '] },'; };
+const emit = () => { document.getElementById('out').value = ORDER.map(line).join('\n'); };
+
+function paintPicker() {
+  const box = document.getElementById('picker'); box.textContent = '';
+  ORDER.forEach(ch => { const b = document.createElement('button');
+    b.textContent = ch;
+    b.className = (ch === cur ? 'on' : '') + (edits[ch] ? ' edited' : '');
+    b.addEventListener('click', () => { cur = ch; sel = null;
+      glyphRes = 0; renderGlyph(ch); setView(0, 0, N); paintPicker(); });
+    box.appendChild(b); });
+}
+/* ── 파일에 바로 저장 ────────────────────────────────────────────────
+   File System Access API 로 trace-assets.js 를 직접 덮어쓴다.
+   정적 서버라 업로드 경로가 없고, 손으로 붙여넣는 단계를 없애려면 이 길뿐이다.
+   고른 파일은 IndexedDB 에 남겨 두어 다음 방문에도 다시 고를 필요가 없다. */
+const CAN_SAVE = typeof window.showOpenFilePicker === 'function';
+const msg = (t, bad) => { const e = document.getElementById('saveMsg');
+  e.innerHTML = t; e.style.color = bad ? '#c0392b' : '#1a7f47'; };
+let fileHandle = null;
+
+const idb = () => new Promise((ok, no) => { const r = indexedDB.open('spellingbuilder.editor', 1);
+  r.onupgradeneeded = () => r.result.createObjectStore('h');
+  r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
+const idbPut = async (v) => { const db = await idb();
+  return new Promise((ok, no) => { const t = db.transaction('h', 'readwrite');
+    t.objectStore('h').put(v, 'traceAssets'); t.oncomplete = ok; t.onerror = () => no(t.error); }); };
+const idbGet = async () => { const db = await idb();
+  return new Promise((ok) => { const q = db.transaction('h', 'readonly').objectStore('h').get('traceAssets');
+    q.onsuccess = () => ok(q.result || null); q.onerror = () => ok(null); }); };
+
+async function pickFile() {
+  const [h] = await window.showOpenFilePicker({
+    types: [{ description: 'trace-assets.js', accept: { 'text/javascript': ['.js'] } }],
+    multiple: false,
+  });
+  const text = await (await h.getFile()).text();
+  if (!text.includes('const TRACE = {'))
+    throw new Error('이 파일에는 TRACE 블록이 없다. app/trace-assets.js 를 고를 것.');
+  fileHandle = h; await idbPut(h);
+  msg(`저장할 파일: <b>${h.name}</b>`);
+  return h;
+}
+/* 파일의 TRACE 블록만 갈아 끼운다 — 머리말과 뒷부분은 그대로 둔다 */
+function patchSource(text) {
+  const head = text.indexOf('  const TRACE = {');
+  if (head < 0) throw new Error('TRACE 블록을 찾지 못했다');
+  const tail = text.indexOf('\n  };', head);
+  if (tail < 0) throw new Error('TRACE 블록의 끝을 찾지 못했다');
+  return text.slice(0, head) + '  const TRACE = {\n'
+    + ORDER.map(line).join('\n') + text.slice(tail);
+}
+async function saveFile() {
+  const btn = document.getElementById('save');
+  try {
+    const changed = ORDER.filter(ch => edits[ch]);
+    if (!changed.length) { msg('고친 게 없다 — 저장할 것이 없다.'); return; }
+    // 무엇이 바뀌는지 보여 주고 확인받는다. 실수로 건드린 글자가 조용히 들어가면 안 된다.
+    if (!confirm(`${changed.length}자를 trace-assets.js 에 덮어쓴다.\n\n`
+        + changed.join(' ') + '\n\n계속할까?')) { msg('저장을 취소했다.'); return; }
+    btn.disabled = true;
+    if (!fileHandle) await pickFile();
+    if (await fileHandle.queryPermission({ mode: 'readwrite' }) !== 'granted'
+        && await fileHandle.requestPermission({ mode: 'readwrite' }) !== 'granted')
+      throw new Error('쓰기 권한을 주지 않았다');
+    const text = await (await fileHandle.getFile()).text();
+    const out = patchSource(text);
+    const w = await fileHandle.createWritable();
+    await w.write(out); await w.close();
+    ORDER.forEach(ch => { base[ch] = clone(data(ch)); });   // 저장한 값이 새 기준이 된다
+    edits = {}; localStorage.removeItem(KEY); undoStack.length = 0;
+    sel = null; draw(); paintPicker(); emit();
+    msg(`<b>${fileHandle.name}</b> 에 저장했다 — ${changed.length}자 (${changed.join(' ')}).`
+      + ' 게임 화면은 새로고침하면 바뀐다.');
+  } catch (e) {
+    if (e && e.name === 'AbortError') msg('파일 고르기를 취소했다.', true);
+    else msg('저장하지 못했다 — ' + (e && e.message ? e.message : e), true);
+  } finally { btn.disabled = false; }
+}
+document.getElementById('save').addEventListener('click', saveFile);
+document.getElementById('pick').addEventListener('click',
+  () => pickFile().catch(e => { if (e.name !== 'AbortError') msg(e.message, true); }));
+if (!CAN_SAVE) {
+  ['save', 'pick'].forEach(id => { document.getElementById(id).disabled = true; });
+  msg('이 브라우저는 파일에 바로 쓰지 못한다(Chrome/Edge 에서 된다). '
+    + '아래 칸을 복사해 <b>trace-assets.js</b> 의 TRACE 에 붙일 것.', true);
+} else {
+  idbGet().then(h => { if (!h) return; fileHandle = h;
+    msg(`저장할 파일: <b>${h.name}</b> — 처음 저장할 때 권한을 한 번 묻는다.`); });
+}
+
+const copy = (t) => navigator.clipboard.writeText(t)
+  .then(() => { const o = document.getElementById('out'); o.style.borderColor = '#1a7f47';
+    setTimeout(() => { o.style.borderColor = ''; }, 500); });
+document.getElementById('copyOne').addEventListener('click', () => copy(line(cur)));
+document.getElementById('copyAll').addEventListener('click', () =>
+  copy(document.getElementById('out').value));
+document.getElementById('undo').addEventListener('click', () => {
+  const last = undoStack.pop(); if (!last) return;
+  const [ch, d] = last;
+  if (JSON.stringify(d) === JSON.stringify(base[ch])) delete edits[ch]; else edits[ch] = d;
+  localStorage.setItem(KEY, JSON.stringify(edits));
+  cur = ch; glyphRes = 0; renderGlyph(ch); draw(); paintPicker(); emit(); });
+document.getElementById('reset').addEventListener('click', () => {
+  undoStack.push([cur, clone(data(cur))]); delete edits[cur];
+  localStorage.setItem(KEY, JSON.stringify(edits)); draw(); paintPicker(); emit(); });
+document.getElementById('resetAll').addEventListener('click', () => {
+  if (!confirm('고친 값을 전부 버리고 파일에 구워진 값으로 되돌린다.')) return;
+  edits = {}; localStorage.removeItem(KEY); draw(); paintPicker(); emit(); });
+{
+  const sl = document.getElementById('alpha'), lb = document.getElementById('alphaVal');
+  const show = () => { lb.textContent = Math.round(glyphAlpha * 100) + '%'; };
+  sl.value = String(Math.round(glyphAlpha * 100)); show();
+  sl.addEventListener('input', () => {
+    glyphAlpha = Number(sl.value) / 100;
+    localStorage.setItem(ALPHA_KEY, String(glyphAlpha));
+    show(); draw();
+  });
+}
+
+// fonts.ready 는 '요청된' 폰트만 기다린다. 웹폰트를 직접 불러야 폴백으로 그리지 않는다.
+Promise.all([
+  document.fonts.load('700 560px "SofiaProSoft"'),
+  document.fonts.load('700 560px "Lexend"'),
+]).then(() => document.fonts.ready)
+  .then(() => { renderGlyph(cur); draw(); paintPicker(); emit(); });
+</script>

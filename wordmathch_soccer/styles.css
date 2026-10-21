@@ -1,0 +1,3141 @@
+@font-face {
+  font-family: "Lexend Game";
+  src: url("assets/font/Lexend-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Sofia Pro Soft Game";
+  src: url("assets/font/Mostardesign - Sofia Pro Soft Light.otf") format("opentype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Sofia Pro Soft Game";
+  src: url("assets/font/Mostardesign - Sofia Pro Soft Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Sofia Pro Soft Game";
+  src: url("assets/font/Mostardesign - Sofia Pro Soft Medium.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Sofia Pro Soft Game";
+  src: url("assets/font/Mostardesign - Sofia Pro Soft Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 사장님(10-02): 한글 표기는 전부 나눔스퀘어라운드로 그린다. 처음엔 Bold 였고, 같은 날 "NanumSquareRoundOTFEB로 바꿔서 적용"으로
+   ExtraBold 파일을 쓴다. 이 맥에 깔린 글꼴과 겹치지 않게 이름을 따로 둔다.
+   쓰는 파일이 하나라 굵기를 100 900 범위로 선언한다(하나의 굵기로 두면 더 굵게 요청할 때 가짜 굵게가 덧씌워진다).
+   첫 화면에 대체 글꼴이 번쩍 보이지 않게 block 으로 둔다. index.html 이 미리 받고 content-loader 가 받은 뒤 시작한다.
+   파일을 못 받으면(경로 오류) 한글은 바로 뒤의 시스템 한글 글꼴로 그려지고, content-loader 도 8초 넘게 기다리지 않는다. */
+@font-face {
+  font-family: "NanumSquareRound Game";
+  src: url("assets/font/NanumFontSetup_OTF_SQUARE_ROUND/NanumSquareRoundOTFEB.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+}
+
+/* 사장님 2026-10-15 "1번으로 통일 해" / "텍스트 말하는거야"(관리방 전달): 오답 목록 글자만 레이싱 · 실로폰 화면처럼 보통 굵기로 그린다.
+   굵게 보이던 까닭 셋 — 영어 단어는 Lexend 가 SemiBold 파일 하나뿐이라 600, 한글 뜻은 ExtraBold 파일 하나가 모든 굵기를 맡음,
+   목록에 글자 매끄럽게(antialiased)가 없어 맥 크롬에서 획이 더 두꺼움. 레이싱은 단어 Lexend Regular · 뜻 나눔스퀘어라운드 B 파일 ·
+   antialiased 다. 다른 자리(문제 단어 · 보기 · 결과 화면)의 글자는 그대로 두려고 오답 목록만 쓰는 이름을 따로 둔다.
+   같은 글자 · 크기로 잰 잉크 양: 뜻 EB 3158 → B 2586, 단어 SemiBold 2995 → Regular 2386. content-loader 가 시작 전에 미리 받는다. */
+@font-face {
+  font-family: "Lexend Regular Game";
+  src: url("assets/font/Lexend-Regular.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "NanumSquareRound B Game";
+  src: url("assets/font/NanumFontSetup_OTF_SQUARE_ROUND/NanumSquareRoundOTFB.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: dark;
+  font-family: "Sofia Pro Soft Game", "NanumSquareRound Game", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  font-weight: 700;
+  font-style: normal;
+  background: #041333;
+  -webkit-tap-highlight-color: transparent;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background:
+    radial-gradient(circle at 50% 42%, #133d82 0%, #071c4e 48%, #020818 100%);
+}
+
+button {
+  font: inherit;
+}
+
+.app-shell {
+  position: fixed;
+  inset:
+    env(safe-area-inset-top)
+    env(safe-area-inset-right)
+    env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.game-stage {
+  --stage-scale: 1;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  transform: translate(-50%, -50%) scale(var(--stage-scale));
+  transform-origin: center;
+  background: #08235f;
+  box-shadow: 0 0 120px rgb(0 0 0 / 55%);
+  user-select: none;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+}
+
+.screen[hidden],
+.end-overlay[hidden] {
+  display: none;
+}
+
+.stadium-background,
+.background-vignette,
+.stadium-light {
+  position: absolute;
+  pointer-events: none;
+}
+
+.stadium-background {
+  inset: 0;
+  z-index: 0;
+  width: 1920px;
+  height: 1080px;
+  object-fit: cover;
+}
+
+.background-vignette {
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(180deg, rgb(1 15 60 / 16%) 0%, transparent 47%, rgb(8 45 0 / 9%) 100%),
+    radial-gradient(ellipse at center, transparent 52%, rgb(0 8 34 / 18%) 100%);
+}
+
+.stadium-light {
+  top: -18px;
+  z-index: 2;
+  width: 955px;
+  height: 893px;
+  object-fit: contain;
+  opacity: 0.88;
+  animation: light-breathe 4.6s ease-in-out infinite alternate;
+}
+
+.stadium-light-left {
+  left: -4px;
+}
+
+.stadium-light-right {
+  right: -4px;
+  width: 951px;
+  animation-delay: -2.3s;
+}
+
+/* 2차 검수 공통-9(사장님 2026-10-12 "배치는 시작화면 로고와 버튼 사이인데 비율 잘 조절해서"): 로고와 Start 단추 사이에
+   동화 정보 두 줄이 들어갈 자리를 낸다. 로고(그림 628×590)를 90% 로 줄여 26px 올렸다 — y 66~597, 가로 가운데는 그대로 960px.
+   전에는 top 92px · 628×590(y 92~682)이라 Start 단추(753px)까지 71px 뿐이었다. 단추 자리는 그대로다. */
+.game-logo {
+  position: absolute;
+  top: 66px;
+  left: 677.5px;
+  z-index: 5;
+  width: 565px;
+  height: 531px;
+  object-fit: contain;
+  animation:
+    logo-enter 720ms cubic-bezier(0.2, 0.9, 0.24, 1.14) both,
+    logo-float 4s ease-in-out 900ms infinite;
+}
+
+/* 동화 정보(게임 정보 API 의 title · subtitle): 로고 아래끝(597px)과 Start 단추 위끝(753px) 사이 156px 의 세로 가운데에
+   두 줄을 가운데 맞춤으로 놓는다. 한 줄만 오면 그 한 줄이 가운데에 온다. 밝은 잔디 · 골대 그물 위에서도 읽히게
+   흐림 없는 진한 테두리를 두른다 — 글자 뒤에 판이나 흐림은 쓰지 않는다(도움말과 같은 방식).
+   글꼴은 기본(영어 Sofia Pro Soft, 한글 나눔스퀘어라운드)이다. 긴 제목은 fitStoryLine 이 배율로 줄이고, 그래도 넘치면 말줄임한다. */
+.story-info {
+  position: absolute;
+  top: 597px;
+  left: 50%;
+  z-index: 5;
+  display: flex;
+  width: 1280px;
+  height: 156px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #fff;
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: story-info-enter 420ms 200ms ease-out both;
+}
+
+.story-info[hidden],
+.story-info-line[hidden] {
+  display: none;
+}
+
+.story-info-line {
+  max-width: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-size: calc(38px * var(--story-line-scale, 1));
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-shadow:
+    3px 0 0 #0a2a6b, -3px 0 0 #0a2a6b, 0 3px 0 #0a2a6b, 0 -3px 0 #0a2a6b,
+    3px 3px 0 #0a2a6b, -3px 3px 0 #0a2a6b, 3px -3px 0 #0a2a6b, -3px -3px 0 #0a2a6b,
+    0 5px 0 #061d4f;
+  white-space: nowrap;
+}
+
+@keyframes story-info-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.icon-button {
+  position: absolute;
+  z-index: 40;
+  width: 76px;
+  height: 80px;
+  padding: 7px;
+  border: 0;
+  border-radius: 23px;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 130ms ease, filter 130ms ease;
+}
+
+.icon-button img {
+  display: block;
+  width: 62px;
+  height: 66px;
+  pointer-events: none;
+}
+
+.sound-button {
+  top: 17px;
+  left: 27px;
+}
+
+.close-button {
+  top: 17px;
+  right: 27px;
+}
+
+/* 2차 수정(OX 와 같이): 도움말 화면에서만 닫기 단추가 뒤로가기 그림이 되어 왼쪽 위(스피커 자리)로 간다.
+   스피커는 도움말에서 숨는다. 시작·게임 화면은 위 두 규칙 그대로다. help-mode 는 setHelpNavigation 이 붙이고 뗀다. */
+.game-stage.help-mode .close-button {
+  right: auto;
+  left: 27px;
+}
+
+.sound-button[hidden] {
+  display: none;
+}
+
+.icon-button:hover,
+.icon-button:focus-visible {
+  outline: none;
+  filter: brightness(1.12) saturate(1.08);
+  transform: translateY(-3px) scale(1.06);
+}
+
+.icon-button:active {
+  transform: translateY(5px) scale(0.96);
+}
+
+.start-menu {
+  position: absolute;
+  top: 753px;
+  left: 50.104167%;
+  z-index: 5;
+  display: flex;
+  width: 348px;
+  transform: translateX(-50%);
+  flex-direction: column;
+  gap: 34px;
+  animation: startMenuEnter 520ms 360ms ease-out both;
+}
+
+.loading-panel {
+  position: absolute;
+  top: 996px;
+  left: 50%;
+  z-index: 12;
+  display: flex;
+  min-width: 560px;
+  max-width: 820px;
+  min-height: 56px;
+  padding: 11px 20px 12px;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  border: 3px solid rgb(255 255 255 / 42%);
+  border-radius: 999px;
+  background: rgb(4 30 87 / 84%);
+  box-shadow: 0 9px 20px rgb(0 0 0 / 26%);
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  transform: translateX(-50%);
+}
+
+.loading-panel[hidden] {
+  display: none;
+}
+
+.loading-panel strong {
+  color: #fff36a;
+  font-family: "Lexend Game", Arial, system-ui, sans-serif;
+  font-weight: 600;
+  font-style: normal;
+}
+
+.loading-panel.is-error {
+  border-color: rgb(255 190 190 / 75%);
+  background: rgb(116 24 52 / 90%);
+}
+
+.loading-spinner {
+  width: 25px;
+  height: 25px;
+  flex: 0 0 auto;
+  border: 4px solid rgb(255 255 255 / 35%);
+  border-top-color: #fff36a;
+  border-radius: 50%;
+  animation: loading-spin 750ms linear infinite;
+}
+
+.loading-panel.is-error .loading-spinner {
+  display: none;
+}
+
+.retry-load-button {
+  min-width: 96px;
+  padding: 7px 16px 8px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #ff7c2f;
+  box-shadow: 0 4px 0 #a93b24;
+  color: #fff;
+  cursor: pointer;
+  font-family: "Lexend Game", Arial, system-ui, sans-serif;
+  font-size: 19px;
+  font-weight: 600;
+  font-style: normal;
+}
+
+.retry-load-button:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #a93b24;
+}
+
+.play-screen {
+  --time-ratio: 1;
+}
+
+.particle-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 1920px;
+  height: 1080px;
+  pointer-events: none;
+}
+
+.game-particle-canvas {
+  z-index: 8;
+}
+
+.result-particle-canvas {
+  z-index: 1;
+}
+
+.play-screen.showing-result .game-particle-canvas {
+  visibility: hidden;
+}
+
+.play-screen.showing-result .quiz-panel,
+.play-screen.showing-result .choice-button,
+.play-screen.showing-result .action-scene,
+.play-screen.showing-result .feedback-text,
+.play-screen.showing-result .combo-text,
+.play-screen.showing-result .game-hud {
+  visibility: hidden;
+}
+
+.quiz-panel {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 5;
+  width: 857px;
+  height: 283px;
+  transform: translateX(-50%);
+}
+
+.quiz-panel > img {
+  position: absolute;
+  inset: 0;
+  width: 857px;
+  height: 283px;
+  pointer-events: none;
+}
+
+.quiz-word-row {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  width: 700px;
+  transform: translate(-50%, -50%);
+}
+
+.quiz-word {
+  display: block;
+  max-width: 700px;
+  overflow: hidden;
+  color: #050505;
+  /* 영어 단어 칸이지만 데이터에 한글 단어가 오면 한글은 나눔으로 그린다(사장님 10-02 한글 표기 전부). 영어는 Lexend 그대로다. */
+  font-family: "Lexend Game", "NanumSquareRound Game", Arial, system-ui, sans-serif;
+  font-size: 74px;
+  font-weight: 600;
+  font-style: normal;
+  /* Lexend 는 올림 1.0em + 내림 0.25em 이 필요하다. 줄 높이가 그보다 작으면
+     overflow: hidden 과 겹쳐 g, y, p 같은 글자의 내림 부분이 잘린다.
+     대체 글꼴 Arial(1.117em)까지 여유 있게 덮는 값으로 둔다. */
+  line-height: 1.3;
+  text-align: center;
+  white-space: nowrap;
+  /* 2차 수정: 말줄임으로 자르지 않는다. 글자 크기는 fitQuizWord 가 맞춘다.
+     높이 한도는 말풍선 안쪽(quizebox.png 175px)에서 위아래 여유를 뺀 값이다. */
+  max-height: 170px;
+}
+
+.quiz-word.is-wrapped {
+  white-space: normal;
+  text-wrap: balance;
+}
+
+/* 단어 하나는 줄바꿈 없는 칸이다. 두 줄로 나눌 때 띄어쓰기에서만 나뉘게 한다('-' 뒤에서 나뉘지 않는다). */
+.quiz-word-part {
+  white-space: nowrap;
+}
+
+.question-countdown {
+  position: absolute;
+  right: 28px;
+  bottom: 40px;
+  display: grid;
+  width: 158px;
+  height: 52px;
+  padding: 7px 17px 8px;
+  place-items: center;
+  border: 4px solid #fff;
+  border-radius: 999px;
+  background: #0751bd;
+  box-shadow: 0 5px 0 #092b79;
+  color: #fff36a;
+  font-family: "NanumSquareRound Game", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  font-size: 27px;
+  font-weight: 900;
+  font-style: normal;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.question-countdown-timer {
+  display: grid;
+  width: 100%;
+  align-items: baseline;
+  justify-content: center;
+  grid-template-columns: max-content 1ch max-content;
+  column-gap: 2px;
+}
+
+.question-countdown-value {
+  width: 100%;
+  text-align: center;
+}
+
+.question-countdown-status {
+  text-align: center;
+}
+
+/* 2차 수정: 문제 시간 안내 배지는 보이지 않는다. 문제마다 시간이 흐르는 것은 그대로다. */
+.question-countdown[hidden],
+.question-countdown-timer[hidden],
+.question-countdown-status[hidden] {
+  display: none;
+}
+
+.choice-button {
+  position: absolute;
+  top: 378px;
+  z-index: 6;
+  display: grid;
+  width: max-content;
+  min-width: 430px;
+  max-width: 540px;
+  min-height: 185px;
+  max-height: 245px;
+  padding: 28px 35px;
+  place-items: center;
+  border: 6.5px solid #ff7900;
+  border-radius: 42px;
+  background: #fff;
+  box-shadow: 0 13px 22px rgb(22 21 43 / 20%);
+  color: #080808;
+  cursor: pointer;
+  font-family: "Sofia Pro Soft Game", "NanumSquareRound Game", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  font-size: 40px;
+  font-weight: 800;
+  font-style: normal;
+  line-height: 1.28;
+  text-align: center;
+  text-wrap: balance;
+  touch-action: manipulation;
+  transform: translateX(-50%);
+  transition: transform 140ms ease, filter 140ms ease, border-color 140ms ease;
+}
+
+.choice-button span {
+  max-width: 456px;
+}
+
+.choice-button span.is-english {
+  font-family: "Lexend Game", Arial, system-ui, sans-serif;
+  font-weight: 600;
+  font-style: normal;
+}
+
+.choice-left {
+  left: 320px;
+}
+
+.choice-right {
+  left: 1600px;
+}
+
+.choice-button:hover,
+.choice-button:focus-visible {
+  /* 2차 수정: 누를 때 생기던 하얀 테두리를 없앤다. 떠오름과 밝기로 가리킴은 남긴다. */
+  outline: none;
+  filter: brightness(1.04);
+  transform: translateX(-50%) translateY(-5px) scale(1.025);
+}
+
+.choice-button:active,
+.choice-button.is-selected {
+  outline: 0;
+  border-color: #ffb100;
+  filter: brightness(0.96);
+  transform: translateX(-50%) translateY(6px) scale(0.985);
+}
+
+.choice-button:disabled {
+  color: #080808;
+  opacity: 1;
+}
+
+.play-screen.is-resolving .choice-button {
+  cursor: default;
+  pointer-events: none;
+}
+
+.action-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.goalkeeper-rig,
+.kicker,
+.game-ball {
+  position: absolute;
+  will-change: transform;
+}
+
+.goalkeeper-rig {
+  /* 스프라이트 실측: 캐릭터 발끝이 캔버스 높이의 90%, 발 중심이 폭의 53.7% 지점.
+     캐릭터 키가 교체 이전과 같은 193px이 되도록 상자를 580px로 잡았다. */
+  top: 158px;
+  left: 649px;
+  z-index: 2;
+  width: 580px;
+  height: 580px;
+  transform-origin: 53.7% 90%;
+}
+
+.goalkeeper,
+.caught-ball {
+  position: absolute;
+  object-fit: contain;
+}
+
+.goalkeeper {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.caught-ball {
+  top: 76px;
+  left: 35px;
+  z-index: 2;
+  width: 74px;
+  height: 74px;
+  opacity: 0;
+  transform-origin: center;
+  will-change: opacity, transform;
+  filter: drop-shadow(0 8px 4px rgb(0 0 0 / 30%));
+}
+
+.kicker {
+  /* 스프라이트 실측: 캐릭터 발끝이 캔버스 높이의 94.8%, 발 중심이 폭의 43.9% 지점.
+     캐릭터 키 300px 기준으로 상자를 420px로 잡았다. */
+  top: 472px;
+  left: 593px;
+  z-index: 2;
+  width: 420px;
+  height: 420px;
+  transform-origin: 43.9% 94.8%;
+}
+
+/* 킥 그림은 캐릭터가 캔버스 안에서 왼쪽에 치우쳐 있어, 그 구간에만 오른쪽으로 보정한다. */
+.kicker.is-kick-shift {
+  margin-left: 15px;
+}
+
+.game-ball {
+  top: 739px;
+  left: 889px;
+  z-index: 1;
+  width: 112px;
+  height: 112px;
+  transform-origin: center;
+}
+
+/* 킥 스프라이트가 동작을 모두 담고 있어 배치 쪽 흔들림 연출은 두지 않는다.
+   (예전 정지 그림 시절의 연출이었고, 지금 얹으면 동작이 두 겹으로 겹친다) */
+
+.play-screen.result-correct.shot-left .game-ball {
+  animation: ball-goal-left 900ms linear both;
+}
+
+.play-screen.result-correct.shot-right .game-ball {
+  animation: ball-goal-right 900ms linear both;
+}
+
+.play-screen.result-wrong.shot-left .game-ball {
+  animation: ball-save-left 900ms linear both;
+}
+
+.play-screen.result-wrong.shot-right .game-ball {
+  animation: ball-save-right 900ms linear both;
+}
+
+.play-screen.result-wrong .game-ball {
+  z-index: 4;
+}
+
+.play-screen.result-wrong .kicker {
+  z-index: 5;
+}
+
+.play-screen.result-correct .kicker {
+  z-index: 5;
+}
+
+.play-screen.result-correct .goalkeeper {
+  transform-origin: 50% 72%;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+.play-screen.result-correct.shot-left .goalkeeper-rig {
+  animation: goalkeeper-miss-right 900ms linear both;
+}
+
+.play-screen.result-correct.shot-right .goalkeeper-rig {
+  animation: goalkeeper-miss-left 900ms linear both;
+}
+
+.play-screen.result-correct.shot-left .goalkeeper {
+  animation: goalkeeper-body-miss-right 900ms linear both;
+}
+
+.play-screen.result-correct.shot-right .goalkeeper {
+  animation: goalkeeper-body-miss-left 900ms linear both;
+}
+
+.play-screen.result-wrong.shot-left .goalkeeper-rig {
+  animation: goalkeeper-save-left 900ms linear both;
+}
+
+.play-screen.result-wrong.shot-right .goalkeeper-rig {
+  animation: goalkeeper-save-right 900ms linear both;
+}
+
+.play-screen.result-wrong .goalkeeper-rig {
+  z-index: 3;
+}
+
+.play-screen.result-wrong .caught-ball {
+  display: none;
+}
+
+.feedback-text,
+.combo-text {
+  position: absolute;
+  left: 50%;
+  z-index: 9;
+  width: 760px;
+  color: #fff;
+  font-family: "Sofia Pro Soft Game", "NanumSquareRound Game", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  font-weight: 1000;
+  line-height: 1;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 25px) scale(0.82);
+}
+
+.feedback-text.is-english,
+.combo-text.is-english {
+  font-family: "Lexend Game", Arial, system-ui, sans-serif;
+  font-weight: 600;
+  font-style: normal;
+}
+
+.feedback-text {
+  /* 점수판(가로 중심 307px) 바로 위 잔디 영역에서 떠오르게 한다.
+     아래쪽 띠(위쪽 끝 881px)에는 Score 라벨이 있어 덮지 않도록 그 위에 둔다.
+     이전에는 화면 한가운데(top 285px)에 크게 떴다. */
+  top: 822px;
+  left: 307px;
+  width: 360px;
+  font-size: 52px;
+  -webkit-text-stroke: 4px #093681;
+  text-shadow: 0 8px 0 #08275e, 0 14px 22px rgb(0 0 0 / 38%);
+}
+
+.feedback-text.is-visible {
+  animation: feedback-pop 900ms cubic-bezier(0.18, 0.9, 0.25, 1.15) both;
+}
+
+.feedback-text.is-correct {
+  color: #fff04e;
+  -webkit-text-stroke-color: #ec6e00;
+}
+
+.feedback-text.is-wrong {
+  color: #fff;
+  -webkit-text-stroke-color: #d9273d;
+}
+
+.combo-text {
+  /* 2차 수정: 보너스 점수는 점수판 위가 아니라 보너스 UI 위에 띄운다.
+     보너스 공(무대 x 1627~1780, 위끝 906px)의 가로 중심 1703px 에 맞추고, 글자(58px) 아래끝이
+     공 위끝보다 10px 위에 오게 838px 에 둔다. left 는 translate(-50%) 와 함께 가로 중심이다.
+     2차 검수 공통-5 로 보너스 공이 2px 오른쪽으로 가서 이 자리도 1701 → 1703 이 됐다.
+     10-15 바깥 여백을 줄여 공이 46.25px 오른쪽(1673.25~1826.25)으로 가서 1749.25 가 됐다. */
+  top: 838px;
+  left: 1749.25px;
+  width: 360px;
+  color: #ffef3f;
+  font-size: 58px;
+  -webkit-text-stroke: 3px #f04b00;
+  text-shadow: 0 7px 0 #9c2700;
+}
+
+/* 최종 테스트 후속(OX 와 같이): 보너스 공 위 표기는 위에 BONUS 띠, 아래에 보너스 점수를 크게 쓴다.
+   OX 값(cqw)을 1920 무대 px 로 옮겼다. 자리도 OX 와 같이 묶음(높이 약 87px)의 아래끝이 공 위끝(906px)에서
+   30px 안쪽(936px)에 겹쳐 오게 849px 에 둔다. OX 는 공 잉크 위끝 938px, 묶음 아래끝 968px 이다.
+   :has() 대신 showBonusGain 이 붙이는 is-bonus-gain 으로 고른다(옛 Safari·Firefox 에서도 듣게). */
+.combo-text.is-bonus-gain {
+  top: 849px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  color: #fff044;
+  font-family: "Lexend Game", Arial, system-ui, sans-serif;
+  font-size: 42.2px;
+  font-weight: 900;
+  -webkit-text-stroke: 0;
+  text-shadow:
+    0 0 13.4px rgb(255 151 221 / 90%),
+    0 4.2px 0 #b32b7a;
+}
+
+.combo-text-label {
+  padding: 3.5px 11.9px 3.8px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ff5cbc 0%, #d42a86 100%);
+  box-shadow:
+    0 2.5px 0 #8f1658,
+    0 0 16.3px rgb(255 120 205 / 75%);
+  color: #fff;
+  font-size: 20.2px;
+  letter-spacing: 0.14em;
+  text-shadow: 0 1.5px 0 #8f1658;
+}
+
+.combo-text-value {
+  font-size: 54.7px;
+}
+
+/* 최종 테스트 후속(OX 와 같이): 첫째·둘째 공이 켜질 때 그 공 위로 떠오르는 정답 점수. 작고 희다. */
+.combo-step-gain {
+  position: absolute;
+  bottom: 92%;
+  left: 0;
+  z-index: 3;
+  width: 100%;
+  color: #fff;
+  font-family: "Lexend Game", Arial, system-ui, sans-serif;
+  font-size: 28.8px;
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+  text-shadow:
+    0 0 8.6px rgb(77 196 255 / 85%),
+    0 3.1px 0 #1f5fa8;
+  pointer-events: none;
+}
+
+.combo-step-gain[hidden] {
+  display: none;
+}
+
+.combo-step-gain.is-showing {
+  animation: combo-step-gain-rise 900ms cubic-bezier(0.16, 0.82, 0.24, 1.05) both;
+}
+
+@keyframes combo-step-gain-rise {
+  0% { opacity: 0; transform: translateY(17.3px) scale(0.72); }
+  22% { opacity: 1; transform: translateY(-6.7px) scale(1.14); }
+  38% { transform: translateY(-14.4px) scale(1); }
+  78% { opacity: 1; transform: translateY(-35.5px) scale(1); }
+  100% { opacity: 0; transform: translateY(-53.8px) scale(0.95); }
+}
+
+.combo-text.is-visible {
+  animation: combo-pop 1100ms cubic-bezier(0.18, 0.9, 0.25, 1.15) both;
+}
+
+.game-hud {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 7;
+  height: 199px;
+}
+
+.hud-background {
+  position: absolute;
+  inset: 0;
+  width: 1920px;
+  height: 199px;
+  pointer-events: none;
+}
+
+/* 2차 검수 공통-5(사장님 2026-10-12 "OX 의 배치 방식을 보고 자기 방에 맞게"): Score 상자는 막대 그림(ui_bar.png)에
+   없고 따로 그린다(box_score.png). 그림(1881×836)은 둘레가 투명하다 — 보이는 상자는 그 안 x 131~1751 · y 122~722 다.
+   자리는 파일 크기가 아니라 보이는 상자로 잡는다: 보이는 상자가 무대 x 140~476(폭 336px), 아래 띠 안 y 43~167 에 온다.
+   배율 336 / 1620 = 0.2074. 왼쪽 여백 140px 은 마지막 보너스 그림의 오른쪽 여백과 같다(.combo-ball-special).
+   사장님 2026-10-15 "붉은 색으로 표시한 부분 넓다는 지적"(바깥 여백 140px 이 넓음): 하단바의 네 틈(바깥 둘 · Score 상자↔시계 ·
+   막대↔첫 공)을 모두 93.75px 로 같게 둔다 — 보이는 폭 Score 336 + 시계 묶음 774 + 공 셋 435 = 1545, (1920 - 1545) / 4.
+   그래서 상자 · 숫자 · 금빛 링을 46.25px 왼쪽으로(보이는 상자 x 93.75~429.75), 공 셋을 46.25px 오른쪽으로 옮겼다. */
+.score-box {
+  position: absolute;
+  top: 17.7px;
+  left: 66.55px;
+  z-index: 1;
+  width: 390.1px;
+  height: 173.4px;
+  max-width: none;
+  pointer-events: none;
+}
+
+/* 점수 숫자는 상자 그림의 "Score" 글자(아래 띠 안 y 64~90, 높이 약 26px) 아래 칸에 놓는다.
+   크기는 그 글자에 맞춰 숫자 높이가 조금 큰 약 30px 이 되게 했다(OX 와 같은 방식) — 이 방 글꼴(Sofia Pro Soft)은
+   44px 일 때 숫자 높이가 29.8px 이다(브라우저에서 잼). 숫자 위아래 끝(아래 띠 안 y 110~139)이 "Score" 글자 아래끝(90)과
+   상자 안쪽 아래끝(159) 사이 한가운데에 온다 — 위 19.7px · 아래 19.6px.
+   전의 55px · top 91px 은 상자가 막대에 그려져 있던 때의 값이다. */
+.score-value {
+  position: absolute;
+  top: 106px;
+  left: 93.75px;
+  z-index: 2;
+  width: 336px;
+  color: #fff;
+  font-family: "Sofia Pro Soft Game", "NanumSquareRound Game", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  font-size: 44px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  line-height: 1;
+  text-align: center;
+  text-shadow: 0 4px 0 rgb(15 37 91 / 55%);
+}
+
+/* 보너스 효과(사장님 2026-10-12 "금빛 링 + 숫자 커짐" — 형제 카드 · 바다속 · 두더지 방식): 보너스가 붙는 순간
+   Score 상자 둘레에 금빛 테두리와 반짝임이 퍼지고, 점수 숫자가 금색으로 커졌다 돌아온다.
+   숫자 굴림(animateScore)과 보너스 공 위 BONUS 표기는 그대로다 — 이 효과는 거기에 더해진다.
+   자리는 보이는 Score 상자(아래 띠 안 x 140~476 · y 43~167, 모서리 반지름 약 28px — box_score.png 에서 잼)에 맞췄다.
+   상자 그림 위, 점수 숫자(z 2) 아래에 깔린다. 켜고 끄는 것은 playScoreBonus · clearScoreBonus 가 한다. */
+.score-burst {
+  position: absolute;
+  top: 43px;
+  left: 93.75px;
+  z-index: 1;
+  width: 336px;
+  height: 124.4px;
+  border-radius: 28px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.score-burst.is-playing {
+  box-shadow:
+    0 0 0 5px #ffd84a,
+    0 0 27px 6px rgb(255 196 40 / 75%),
+    inset 0 0 23px rgb(255 220 90 / 45%);
+  animation: score-burst-ring 900ms ease-out forwards;
+}
+
+/* 반짝임 두 겹. 상자보다 조금 넓게 깔고(위아래 34% · 22%), 둘째 겹은 0.12초 늦게 퍼진다. */
+.score-burst::before,
+.score-burst::after {
+  position: absolute;
+  inset: -34% -10%;
+  content: "";
+  opacity: 0;
+  background:
+    radial-gradient(circle, #fff 0 2.7px, rgb(255 226 96 / 90%) 3.8px, transparent 7.7px) 6% 18% / 25px 25px no-repeat,
+    radial-gradient(circle, #fff 0 2.3px, rgb(255 206 60 / 90%) 3.5px, transparent 6.9px) 94% 12% / 23px 23px no-repeat,
+    radial-gradient(circle, #fff 0 1.9px, rgb(255 226 96 / 85%) 3.1px, transparent 6.1px) 98% 80% / 21px 21px no-repeat,
+    radial-gradient(circle, #fff 0 2.3px, rgb(255 206 60 / 85%) 3.5px, transparent 6.5px) 2% 86% / 21px 21px no-repeat,
+    radial-gradient(circle, #fff 0 1.9px, rgb(255 236 140 / 85%) 2.9px, transparent 5.8px) 52% 0% / 19px 19px no-repeat;
+}
+
+.score-burst::after {
+  inset: -22% -4%;
+  background:
+    radial-gradient(circle, #fff 0 1.7px, rgb(255 236 140 / 85%) 2.7px, transparent 5.4px) 22% 2% / 17px 17px no-repeat,
+    radial-gradient(circle, #fff 0 1.7px, rgb(255 214 74 / 85%) 2.7px, transparent 5.4px) 78% 4% / 17px 17px no-repeat,
+    radial-gradient(circle, #fff 0 1.5px, rgb(255 236 140 / 85%) 2.5px, transparent 5px) 100% 46% / 15px 15px no-repeat,
+    radial-gradient(circle, #fff 0 1.5px, rgb(255 214 74 / 85%) 2.5px, transparent 5px) 0% 50% / 15px 15px no-repeat;
+}
+
+.score-burst.is-playing::before {
+  animation: score-burst-sparkle 900ms ease-out forwards;
+}
+
+.score-burst.is-playing::after {
+  animation: score-burst-sparkle 900ms 120ms ease-out forwards;
+}
+
+.score-value.is-bonus-punch {
+  animation: score-bonus-punch 620ms cubic-bezier(0.2, 0.9, 0.3, 1.35);
+}
+
+@keyframes score-burst-ring {
+  0% { opacity: 0; transform: scale(0.92); }
+  22% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.18); }
+}
+
+@keyframes score-burst-sparkle {
+  0% { opacity: 0; transform: scale(0.6); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.28); }
+}
+
+@keyframes score-bonus-punch {
+  0% { transform: scale(1); }
+  42% { color: #ffe260; transform: scale(1.28); }
+  70% { transform: scale(0.96); }
+  100% { transform: scale(1); }
+}
+
+/* 사장님 2026-10-15 "타임 라인에 좌우 붙어있는 Score박스,콤보 등 여백이 좁아 보여 모두 비율에 맞게": 시계 · 막대 · 채움 · 남은 시간을
+   한 묶음으로 비율 그대로 0.9419배 줄여 Score 상자(오른끝 476)와 첫 보너스 공(왼끝 1345) 사이 가운데에 둔다 — 양쪽 여백 70px.
+   전에는 묶음이 535~1309 라 여백이 59px · 36px 로 좁고 달랐다. 묶음 안의 값(채움 길이 계산 등)은 그대로 두고 통째로 줄인다.
+   기준점은 묶음 가운데(922, 104)이고 가운데를 910.5 로 옮긴다. 무대가 통째로 줄어드니 화면 폭에 대한 비율도 같다.
+   사장님 2026-10-15 "붉은 색으로 표시한 부분 넓다는 지적": 바깥 여백(140px)을 줄여 네 틈을 93.75px 로 같게 하면서 묶음은
+   본디 크기(0.9419배 줄임 없음)로 되돌렸다 — 묶음 523.5~1297.5, 가운데 910.5 는 그대로다. */
+.total-timer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  transform: translateX(-11.5px);
+}
+
+.timer-clock {
+  position: absolute;
+  top: 48px;
+  left: 535px;
+  z-index: 4;
+  width: 132px;
+  height: 111px;
+  transform-origin: 50% 58%;
+  will-change: transform, filter;
+}
+
+.play-screen.clock-running .timer-clock {
+  animation: clock-tick 1s ease-in-out infinite;
+}
+
+.play-screen.timer-urgent .timer-clock {
+  animation: clock-urgent 500ms ease-in-out infinite;
+  filter: drop-shadow(0 0 9px rgb(255 215 57 / 75%));
+}
+
+.play-screen.timer-critical .timer-clock {
+  animation: clock-critical 280ms ease-in-out infinite;
+  filter: drop-shadow(0 0 14px rgb(255 65 45 / 92%));
+}
+
+.play-screen.timer-ended .timer-clock {
+  animation: clock-finish 560ms cubic-bezier(0.2, 0.9, 0.25, 1.2) both;
+}
+
+.timer-track {
+  position: absolute;
+  top: 82px;
+  left: 596px;
+  z-index: 1;
+  width: 713px;
+  height: 55px;
+}
+
+.timer-fill-mask {
+  position: absolute;
+  top: 82px;
+  left: 596px;
+  z-index: 2;
+  display: block;
+  /* 2차 수정: 시계 몸통이 막대 앞 36px 를 덮는다. ui_timer1 을 막대 높이의 줄마다 재어, 왼쪽부터
+     끊김 없이 이어진 몸통의 오른끝(시계 안 x 97 → 무대 x 632)을 썼다. 그 오른쪽에 떨어져 있는
+     반짝임 화소(x 108~129)는 몸통이 아니다 — 처음에는 그것까지 넣어 68px 로 잡았다가, 시간이 0 이어도
+     막대가 32px 남는 것을 독립 검토가 찾았다.
+     예전처럼 713px × 비율로 그리면 보이는 길이가 남은 시간보다 짧았고, 비율이 36/713(약 5%) 아래면
+     채움 전체가 시계 밑에 숨었다. 가려지는 36px 를 먼저 깔고 나머지 677px 를 비율로 늘린다 —
+     보이는 길이 = 677px × 비율, 시간이 0 이면 0. */
+  /* 최종 테스트 후속(OX 와 같이): 끝을 트랙 끝(1309)이 아니라 채움 그림 잉크 끝(578 + 726 = 1304)에 맞춘다.
+     트랙 끝까지 늘리면 처음 몇 초는 투명한 꼬리만 깎여 막대가 움직이지 않는다. 보이는 길이 = 672px × 비율. */
+  width: calc(36px + 672px * var(--time-ratio));
+  height: 55px;
+  overflow: hidden;
+  border-radius: 999px;
+  transition: width 100ms linear;
+}
+
+.timer-fill {
+  position: absolute;
+  top: -22px;
+  left: -18px;
+  width: 750px;
+  height: 99px;
+  max-width: none;
+}
+
+.total-time-text {
+  position: absolute;
+  top: 35px;
+  left: 1120px;
+  width: 190px;
+  color: #d7ff49;
+  font-family: "Sofia Pro Soft Game", "NanumSquareRound Game", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  font-size: 34px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  line-height: 1;
+  text-align: right;
+}
+
+/* 최종 테스트 후속(OX 와 같이): 남은 10초부터 숫자가 빨갛게 뛰고 타임바가 빨갛게 깜빡인다. 5초부터는 더 빠르다.
+   빨간 상태는 애니메이션이 아니라 color · filter 평소 규칙이 지킨다 — 동작 줄이기에서도 빨갛게 남는다. */
+.play-screen.clock-running.timer-urgent .total-time-text,
+.play-screen.clock-running.timer-critical .total-time-text {
+  color: #ff4757;
+  text-shadow:
+    0 0 11.5px rgb(255 60 80 / 85%),
+    0 3.8px 2.3px rgb(60 0 10 / 55%);
+  transform-origin: right center;
+}
+
+.play-screen.clock-running.timer-urgent .total-time-text {
+  animation: time-value-beat 1s ease-out infinite;
+}
+
+.play-screen.clock-running.timer-critical .total-time-text {
+  animation: time-value-beat 500ms ease-out infinite;
+}
+
+/* 채움 그림은 초록→하늘 그러데이션이라 색상만 돌리면 신호등이 된다. index.html 의 #timerFillRed 색 행렬로
+   밝기는 살리고 색을 빨강 하나로 모은다(OX 와 같은 행렬). */
+.play-screen.clock-running.timer-urgent .timer-fill,
+.play-screen.clock-running.timer-critical .timer-fill {
+  filter: url(#timerFillRed);
+}
+
+.play-screen.clock-running.timer-urgent .timer-fill {
+  animation: timer-fill-blink 1s steps(1, end) infinite;
+}
+
+.play-screen.clock-running.timer-critical .timer-fill {
+  animation: timer-fill-blink 500ms steps(1, end) infinite;
+}
+
+.svg-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+@keyframes time-value-beat {
+  0% { transform: scale(1.32); }
+  40% { transform: scale(1); }
+  100% { transform: scale(1); }
+}
+
+@keyframes timer-fill-blink {
+  0% { opacity: 1; }
+  50% { opacity: 0.45; }
+  100% { opacity: 1; }
+}
+
+.combo-meter {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.combo-ball {
+  position: absolute;
+  isolation: isolate;
+  transform-origin: center;
+  will-change: transform;
+}
+
+.combo-ball-image {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0.28;
+  filter: grayscale(0.9) brightness(0.55) saturate(0.45);
+  object-fit: contain;
+  transform: scale(0.92);
+  transition:
+    opacity 240ms ease,
+    filter 280ms ease,
+    transform 280ms cubic-bezier(0.2, 0.75, 0.28, 1.35);
+}
+
+.combo-ball::before,
+.combo-ball::after {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+}
+
+.combo-ball::before {
+  z-index: 0;
+  transform: scale(0.9);
+}
+
+.combo-ball::after {
+  z-index: 2;
+  mix-blend-mode: screen;
+}
+
+.combo-ball-one::before,
+.combo-ball-one::after {
+  -webkit-mask-image: url("assets/game/ui_bonus1.png");
+  mask-image: url("assets/game/ui_bonus1.png");
+}
+
+.combo-ball-two::before,
+.combo-ball-two::after {
+  -webkit-mask-image: url("assets/game/ui_bonus2.png");
+  mask-image: url("assets/game/ui_bonus2.png");
+}
+
+.combo-ball-special::before,
+.combo-ball-special::after {
+  -webkit-mask-image: url("assets/game/ui_bonus3.png");
+  mask-image: url("assets/game/ui_bonus3.png");
+}
+
+.combo-ball-one::before {
+  background: rgb(194 226 255 / 58%);
+  filter: blur(7px);
+}
+
+.combo-ball-two::before {
+  background: rgb(158 213 255 / 52%);
+  filter: blur(7px);
+}
+
+.combo-ball-one::after {
+  background: linear-gradient(
+    116deg,
+    transparent 40%,
+    rgb(255 255 255 / 68%) 46%,
+    rgb(207 239 255 / 52%) 49%,
+    transparent 55%
+  );
+  background-position: 140% 0;
+  background-size: 260% 100%;
+}
+
+.combo-ball-two::after {
+  background: linear-gradient(
+    64deg,
+    transparent 41%,
+    rgb(211 240 255 / 46%) 46%,
+    rgb(255 255 255 / 66%) 49%,
+    transparent 55%
+  );
+  background-position: -140% 0;
+  background-size: 260% 100%;
+}
+
+.combo-ball.is-active .combo-ball-image {
+  opacity: 1;
+  transform: scale(1);
+  animation: combo-ball-activate 520ms cubic-bezier(0.2, 0.82, 0.24, 1.35) both;
+}
+
+.combo-ball.is-active::before {
+  animation: combo-silhouette-glow 760ms ease-out both;
+}
+
+.combo-ball-one.is-active .combo-ball-image,
+.combo-ball-two.is-active .combo-ball-image {
+  filter:
+    grayscale(0)
+    brightness(1.04)
+    contrast(1.05)
+    saturate(1)
+    drop-shadow(0 0 4px rgb(255 255 255 / 65%))
+    drop-shadow(0 0 9px rgb(145 215 255 / 38%));
+}
+
+.combo-ball-one.is-active::after {
+  animation: combo-ball-one-glass 640ms 70ms ease-out both;
+}
+
+.combo-ball-two.is-active::after {
+  animation: combo-ball-two-glass 660ms 70ms ease-out both;
+}
+
+/* 2차 검수 공통-5(OX 의 배치 방식을 이 방 그림에 맞춰): 세 그림은 상자를 꽉 채운다(잉크 = 상자).
+   ① 마지막 보너스 공의 오른쪽 여백을 Score 상자의 왼쪽 여백(140px)과 같게 — 공 3 이 1627~1780 이다(전에는 1625~1778, 여백 142px).
+   ② 공 사이를 같은 간격으로 넓힌다 — 28px · 28px(전에는 22px · 22px). OX 는 작은 공 폭 121px 에 약 32px(0.27배)이고,
+      이 방 작은 공은 113px 이라 같은 비율이면 약 30px 인데, 타이머 막대 끝(1309)과의 사이가 OX 처럼 공 사이보다 넓게 남도록 28px 로 했다.
+      공 1 은 1345~1458, 공 2 는 1486~1599. 타이머 막대 끝과 공 1 사이는 36px 이다. 타이머는 옮기지 않았다(OX 도 그대로다).
+   ③ 사장님 2026-10-15 "붉은 색으로 표시한 부분 넓다는 지적": 바깥 여백을 93.75px 로 줄여 세 공을 46.25px 오른쪽으로 —
+      공 1 1391.25~1504.25, 공 2 1532.25~1645.25, 공 3 1673.25~1826.25. 공 사이 28px 은 그대로다(.score-box 주석). */
+.combo-ball-one {
+  top: 47px;
+  left: 1391.25px;
+  width: 113px;
+  height: 116px;
+}
+
+.combo-ball-two {
+  top: 47px;
+  left: 1532.25px;
+  width: 113px;
+  height: 116px;
+}
+
+.combo-ball-special {
+  top: 25px;
+  left: 1673.25px;
+  width: 153px;
+  height: 149px;
+  transform-origin: 50% 100%;
+}
+
+.combo-ball-special.is-active .combo-ball-image {
+  filter:
+    grayscale(0)
+    brightness(1.04)
+    contrast(1.02)
+    saturate(1.1)
+    drop-shadow(0 0 5px rgb(255 255 255 / 55%))
+    drop-shadow(0 0 12px rgb(255 220 74 / 52%))
+    drop-shadow(0 0 18px rgb(255 73 160 / 30%));
+}
+
+.combo-ball-special::before {
+  background: linear-gradient(
+    135deg,
+    rgb(255 236 105 / 58%),
+    rgb(255 94 175 / 40%)
+  );
+  filter: blur(9px);
+}
+
+.combo-ball-special::after {
+  background: radial-gradient(
+    ellipse 24% 18% at 68% 18%,
+    rgb(255 255 255 / 64%) 0 24%,
+    rgb(255 221 236 / 38%) 42%,
+    transparent 72%
+  );
+}
+
+.combo-ball-special.is-active::before {
+  animation: combo-bonus-glow 820ms ease-out both;
+}
+
+.combo-ball-special.is-active::after {
+  animation: combo-bonus-glint 680ms 80ms ease-out both;
+}
+
+.combo-ball-special.is-bursting {
+  animation: combo-bonus-burst 820ms cubic-bezier(0.16, 0.78, 0.22, 1.35) both;
+}
+
+.combo-ball-special.is-bursting::before {
+  animation: combo-bonus-flare 900ms ease-out both;
+}
+
+.end-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  overflow: hidden;
+  animation: result-overlay-enter 360ms ease-out both;
+}
+
+.game-stage.result-mode > .sound-button,
+.game-stage.result-mode > .close-button {
+  display: none;
+}
+
+/* 2차 검수 공통-2 · 공통-3(사장님 2026-10-12 "X버튼 위치 변경 오른쪽 상단으로 이동"): 결과 화면의 닫기(X) 단추는
+   오른쪽 위다. 그 전에는 왼쪽 위(left 27px)였다. 시작 · 게임 화면의 X(.close-button)와 같은 줄, 같은 오른쪽 여백이다 —
+   두 단추 모두 그림의 위끝이 24px, 오른끝이 무대 1886px 에 온다. */
+.result-home-button {
+  top: 17px;
+  right: 27px;
+  left: auto;
+  width: 80px;
+  height: 83px;
+}
+
+.result-home-button img {
+  width: 66px;
+  height: 69px;
+}
+
+/* 검수 신규: 등급별 여우. 결과 카드 그림보다 먼저 그려져 카드에 아래쪽이 가린다.
+   카드 바깥 상자는 bg.png 에서 실측했다 — 왼 317 · 위 338 · 오 1603 · 아래 989.
+   자리는 시안(검수_4차/자산/result/preview.png)을 화소로 재어 역산한 값이다 —
+   오른쪽 끝에서 46px 안으로, 아래끝이 카드 상단선과 같은 줄이라 가리는 부분이 없다.
+   시안의 여우 잉크와 자산의 잉크가 크기까지 같아 확대나 축소가 없다. */
+.result-fox[hidden] {
+  display: none;
+}
+
+.result-fox {
+  position: absolute;
+  top: 68px;
+  left: 1319px;
+  z-index: 0;
+  width: 238px;
+  height: 270px;
+  object-fit: contain;
+  pointer-events: none;
+  animation: result-fox-enter 620ms cubic-bezier(0.18, 0.9, 0.25, 1.16) both;
+}
+
+@keyframes result-fox-enter {
+  from {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.result-layout {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 1920px;
+  height: 1080px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.result-title {
+  position: absolute;
+  top: 150px;
+  left: 705px;
+  z-index: 2;
+  width: 510px;
+  height: 132px;
+  object-fit: contain;
+  pointer-events: none;
+  animation: result-title-enter 620ms cubic-bezier(0.18, 0.9, 0.25, 1.16) both;
+}
+
+.result-points {
+  position: absolute;
+  left: 840px;
+  z-index: 2;
+  width: 140px;
+  color: #292929;
+  font-family: "Sofia Pro Soft Game", "NanumSquareRound Game", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  font-size: 40px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  line-height: 1;
+  text-align: right;
+  /* 숫자가 길어져도 뒤의 "점" 이 다음 줄로 떨어지지 않게 한다(보너스 10,000 이상에서 떨어졌다 — 독립 검토). */
+  white-space: nowrap;
+}
+
+.result-points-number {
+  display: inline-block;
+  line-height: 1;
+}
+
+/* 2차 검수 공통-2(OX 와 같은 방식): Correct · Incorrect 의 "개" 는 없다. Bonus 는 "+" 없이 숫자 뒤에 "점" 이 붙는다.
+   세 줄의 숫자 끝이 한 줄로 맞도록 Correct · Incorrect 에도 "점" 과 같은 폭의 자리를 비워 둔다(보이지 않는다). */
+.result-points::after {
+  /* 2차 검수 공통-16(사장님 2026-10-13 "정렬이 잘 된 느낌이 드러야해"): "점" 의 위아래 끝을 숫자의 위아래 끝과 같게 둔다.
+     한글은 글줄 아래로 내려오고 숫자는 글줄에 앉아, 그대로 두면 "점" 만 처져 보인다. 이 방 글꼴(숫자 Sofia Pro Soft 500 40px ·
+     한글 나눔스퀘어라운드 ExtraBold)로 재어 크기와 올림을 정했다 — 0.725em(29px) · 위로 0.13em(3.77px).
+     무대 1920 기준 숫자 "0" 739.5~766.4 · "점" 739.5~766.4. 전에는 0.7em · top -4px 로 "점" 740.1~766.0(0.9px 작음)이었다.
+     올림은 position: relative 라 줄 높이와 세 줄 숫자 끝 정렬은 바뀌지 않는다. */
+  position: relative;
+  top: -0.13em;
+  margin-left: 6px;
+  color: #655d46;
+  font-size: 0.725em;
+  font-weight: 700;
+  content: "점";
+}
+
+.result-points-correct::after,
+.result-points-incorrect::after {
+  visibility: hidden;
+}
+
+.result-points-correct {
+  top: 512px;
+}
+
+.result-points-incorrect {
+  top: 624px;
+}
+
+.result-points-bonus {
+  top: 736px;
+}
+
+.result-total {
+  position: absolute;
+  top: 610px;
+  left: 1062px;
+  z-index: 2;
+  width: 484px;
+  height: 150px;
+  font-family: "NanumSquareRound Game", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  font-weight: 900;
+  font-style: normal;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  white-space: nowrap;
+}
+
+.result-rank {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  width: 100%;
+  color: #5e594a;
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+}
+
+.result-point-box {
+  position: absolute;
+  top: 68px;
+  left: 110px;
+  width: 265px;
+  height: 81px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.result-total-score {
+  position: absolute;
+  top: 68px;
+  left: 172px;
+  z-index: 1;
+  display: flex;
+  width: 203px;
+  height: 81px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  line-height: 1;
+}
+
+.result-score-number,
+.result-score-unit {
+  display: block;
+  line-height: 1;
+}
+
+.result-score-number {
+  max-width: 150px;
+  overflow: hidden;
+  color: #ff20a8;
+  font-size: 44px;
+  text-overflow: ellipsis;
+}
+
+/* 2차 검수 공통-2(OX 와 같은 방식): "점" 은 숫자와 글자 위아래 끝이 맞게 둔다. 한글은 같은 글자 크기에서 숫자보다 키가 커서
+   (41px 일 때 38.0px 대 숫자 32.3px) 아래로 처져 보였다 — 글자 높이가 숫자와 같아지는 35px(32.5px)로 줄이고 2.2px 올렸다
+   (브라우저에서 이 방 글꼴로 잼). */
+.result-score-unit {
+  position: relative;
+  top: -2.2px;
+  color: #655d46;
+  font-size: 35px;
+}
+
+/* 최종 테스트 후속(사장님, OX 와 같이): 결과화면 점수 밑 안내 글자. 결과 카드 그림(bg.png)이 OX 와 같아
+   OX 의 비율 자리를 그대로 쓴다 — 내 점수 칸(x 1062~1545) 안, 점수 상자 아래다. 0.9cqw = 17.3px. */
+.result-message {
+  position: absolute;
+  top: 73.5%;
+  left: 55.3%;
+  z-index: 3;
+  width: 25.2%;
+  margin: 0;
+  color: #5e594a;
+  font-size: 17.3px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.result-actions {
+  position: absolute;
+  top: 856px;
+  /* 검수 사차 아홉째 항: 쓸 수 없는 버튼은 자리까지 감추므로, 남은 버튼이 늘 가운데 오도록 한다. */
+  left: 50%;
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  transform: translateX(-50%);
+}
+
+.result-action[hidden] {
+  display: none;
+}
+
+.result-action {
+  width: 379px;
+  height: 91px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  opacity: 1;
+}
+
+.result-action:not(:disabled) {
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: filter 130ms ease, transform 130ms ease;
+}
+
+.result-action:not(:disabled):hover,
+.result-action:not(:disabled):focus-visible {
+  outline: none;
+  filter: brightness(1.08) saturate(1.04);
+  transform: translateY(-4px) scale(1.02);
+}
+
+.result-action:not(:disabled):active {
+  filter: brightness(0.97);
+  transform: translateY(5px) scale(0.985);
+}
+
+.result-action img {
+  display: block;
+  width: 379px;
+  height: 91px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.start-help-button {
+  position: absolute;
+  right: 65px;
+  bottom: 15px;
+  z-index: 3;
+  width: 64px;
+  height: 65px;
+  padding: 1px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: filter 130ms ease, transform 130ms ease;
+}
+
+.start-help-button:hover,
+.start-help-button:focus-visible {
+  outline: none;
+  filter: brightness(1.08);
+  transform: translateY(-3px) scale(1.04);
+}
+
+.start-help-button:active {
+  transform: translateY(3px) scale(0.97);
+}
+
+.start-help-button img {
+  display: block;
+  width: 62px;
+  height: 63px;
+  pointer-events: none;
+}
+
+.help-screen {
+  z-index: 30;
+  overflow: hidden;
+  background: #091b52;
+  font-family: "NanumSquareRound Game", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  font-style: normal;
+}
+
+.help-background {
+  position: absolute;
+  inset: 0;
+  width: 1920px;
+  height: 1080px;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.help-content-viewport {
+  position: absolute;
+  top: 115px;
+  right: 175px;
+  bottom: 65px;
+  left: 175px;
+  z-index: 1;
+  display: grid;
+  overflow-x: hidden;
+  overflow-y: auto;
+  place-items: center;
+  overscroll-behavior: contain;
+  scrollbar-color: rgb(255 255 255 / 58%) transparent;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.help-content-viewport::-webkit-scrollbar {
+  width: 12px;
+}
+
+.help-content-viewport::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.help-content-viewport::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 60%);
+  background-clip: padding-box;
+}
+
+.help-content {
+  display: flex;
+  width: 100%;
+  min-height: 100%;
+  padding: 38px 20px 44px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 34px;
+}
+
+.help-content:empty {
+  display: none;
+}
+
+.help-section {
+  width: 100%;
+  max-width: 1540px;
+  text-align: center;
+}
+
+.help-section-title {
+  margin: 0 0 12px;
+  color: #12efd4;
+  /* 사장님(도움말 글자가 잘 안 보인다): 무대(1920)는 화면에 맞춰 통째로 줄어드는데 글자 크기를 화면 폭(vw)으로
+     정해 작은 화면에서 두 번 작아졌다. 무대 px 로 둔다(1920 화면에서 보이던 크기 그대로). */
+  font-size: 58px;
+  font-weight: 800;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+  /* 흰 그물·라인 위에서도 읽히게 흐림 없는 진한 테두리를 두른다. 판이나 흐림은 쓰지 않는다(요청). */
+  text-shadow:
+    3px 0 0 #0a2a6b, -3px 0 0 #0a2a6b, 0 3px 0 #0a2a6b, 0 -3px 0 #0a2a6b,
+    3px 3px 0 #0a2a6b, -3px 3px 0 #0a2a6b, 3px -3px 0 #0a2a6b, -3px -3px 0 #0a2a6b,
+    0 5px 0 #061d4f;
+}
+
+.help-section:first-child .help-section-title {
+  color: #ff6818;
+}
+
+.help-section-content {
+  max-width: 100%;
+  margin: 0;
+  color: #fff;
+  /* 제목과 같은 까닭으로 무대 px 로 둔다(1920 화면에서 2vw = 38.4px 로 보이던 크기). */
+  font-size: 38px;
+  /* 사장님 답(10-02 "가. 본문도 Bold"): 본문도 나눔스퀘어라운드 Bold 다. 2차 수정의 "본문은 굵게 쓰지 않는다"는 이 답으로 바뀌었다.
+     글꼴은 .help-screen 의 한글 글꼴(나눔)을 그대로 받는다. 나눔을 못 받아 시스템 글꼴로 그려질 때도 굵게 보이도록 700 으로 둔다. */
+  font-weight: 700;
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  white-space: pre-line;
+  /* 흐림 없는 진한 테두리. 판이나 흐림은 쓰지 않는다(요청). */
+  text-shadow:
+    2.5px 0 0 #0a2a6b, -2.5px 0 0 #0a2a6b, 0 2.5px 0 #0a2a6b, 0 -2.5px 0 #0a2a6b,
+    2.5px 2.5px 0 #0a2a6b, -2.5px 2.5px 0 #0a2a6b, 2.5px -2.5px 0 #0a2a6b, -2.5px -2.5px 0 #0a2a6b,
+    0 4px 0 #061d4f;
+}
+
+.help-status {
+  display: flex;
+  min-width: 440px;
+  max-width: 900px;
+  min-height: 100px;
+  padding: 22px 34px 25px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 18px;
+  border: 3px solid rgb(255 255 255 / 42%);
+  border-radius: 28px;
+  background: rgb(5 30 88 / 72%);
+  box-shadow: 0 16px 38px rgb(0 0 0 / 28%);
+  color: #fff;
+  font-size: 30px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.help-status[hidden] {
+  display: none;
+}
+
+.help-retry-button {
+  min-width: 145px;
+  padding: 12px 25px 14px;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  background: #ff7c2f;
+  box-shadow: 0 6px 0 #a93b24;
+  color: #fff;
+  cursor: pointer;
+  font-family: "Lexend Game", Arial, system-ui, sans-serif;
+  font-size: 27px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.help-retry-button:hover,
+.help-retry-button:focus-visible {
+  outline: 5px solid rgb(255 255 255 / 35%);
+  outline-offset: 4px;
+  filter: brightness(1.08);
+}
+
+.help-retry-button:active {
+  box-shadow: 0 2px 0 #a93b24;
+  transform: translateY(4px);
+}
+
+.incorrect-answer-dialog[hidden] {
+  display: none;
+}
+
+.incorrect-answer-dialog {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  font-family: "NanumSquareRound Game", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  font-style: normal;
+}
+
+.incorrect-answer-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: rgb(1 11 34 / 55%);
+  cursor: default;
+}
+
+.incorrect-answer-modal {
+  position: absolute;
+  top: 61px;
+  left: 50%;
+  width: 1347px;
+  height: 980px;
+  transform: translateX(-50%);
+}
+
+.incorrect-answer-background {
+  position: absolute;
+  inset: 0;
+  width: 1347px;
+  height: 980px;
+  pointer-events: none;
+}
+
+/* 2차 검수 공통-11(사장님 2026-10-12 "오답 박스 X버튼 위치 지금 올려준것 처럼 배치 … 배치와 크기만 동일하게"): 닫기 단추는
+   팝업 모서리 밖에 걸치지 않고 보라 제목줄 안 오른쪽 끝에, 제목줄(0~99px) 세로 가운데로 놓인다.
+   크기와 여백은 공통 문서의 비율이다 — 원 지름은 팝업 폭(1347px)의 4.2% = 56.6px, 원 오른끝에서 제목줄 오른끝까지는 1.6% = 21.6px.
+   단추 그림(77×87, 원 77px + 아래 그림자 10px)은 그대로 쓰고 비율대로 56.6 × 64px 로 줄였다. 원 가운데가 49.5px 에 온다.
+   처음에는 여백을 주신 화면의 바깥 테두리 기준으로 재서 32.9px 였다 — 이 방 팝업은 제목줄 끝이 곧 팝업 끝이라 문서 기준(제목줄 끝)으로 고쳤다.
+   그 전에는 top -20px · right -16px 에 원 지름 77px 였다. */
+.incorrect-answer-close {
+  position: absolute;
+  top: 21.2px;
+  right: 21.6px;
+  z-index: 3;
+  width: 56.6px;
+  height: 64px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: filter 130ms ease, transform 130ms ease;
+}
+
+.incorrect-answer-close:hover,
+.incorrect-answer-close:focus-visible {
+  outline: none;
+  filter: brightness(1.1);
+  transform: translateY(-3px) scale(1.04);
+}
+
+.incorrect-answer-close:active {
+  transform: translateY(3px) scale(0.97);
+}
+
+.incorrect-answer-close img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* 2차 검수 공통-1(사장님 2026-10-12 "화면이라면 OX퀴즈 처럼 적용"): 오답 목록 표 모양을 OX 와 같게 한다.
+   OX 의 cqw 값을 1920 무대 기준 px(× 19.2)로 옮겼다. 팝업 그림(bg_incorrect.png 1347×980)은 OX 와 같은 그림이고 그대로 쓴다 —
+   보라 제목줄 0~99px, 회색 띠 99~158px, 흰 바탕 158~971px.
+   그 전(최종 테스트 후속)은 회색 띠 아래에 갈색 열 제목, 둥근 연보라 줄, 파란 원 안의 흰 스피커였다. */
+.incorrect-answer-table {
+  position: absolute;
+  /* 열 제목이 회색 띠 안에 들어가도록 띠가 시작하는 자리(99px)에서 표를 시작한다. */
+  top: 99px;
+  left: 9px;
+  width: 1329px;
+  /* 열 제목 줄 59px + 목록 창 793px. */
+  height: 852px;
+  color: #111;
+  /* 사장님 2026-10-15 "1번으로 통일 해": 레이싱 · 실로폰처럼 목록 글자를 매끄럽게 그려 맥에서 획이 덧두꺼워지지 않게 한다. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.incorrect-answer-grid {
+  display: grid;
+  /* 열 자리(팝업 폭 기준, OX 4.74cqw 21cqw): 스피커 가운데 5%, 단어 칸 7.4~37.3%(폭 약 30%), 뜻은 40.1% 에서 시작한다.
+     틀린 횟수 열은 없다. 전에는 219.8px 492px 로 스피커 왼쪽 여백과 단어 칸이 넓었다. */
+  grid-template-columns: 91px 403.2px minmax(0, 1fr);
+}
+
+/* 발음이 없는 회차에도 열 자리는 그대로 두어, 미리보기와 같은 가로 위치를 지킨다. */
+.incorrect-answer-dialog.pronunciation-disabled
+  .incorrect-answer-header > :first-child,
+.incorrect-answer-dialog.pronunciation-disabled .incorrect-answer-audio {
+  visibility: hidden;
+}
+
+.incorrect-answer-header {
+  /* 회색 띠 높이(59px)와 같다. 글자는 띠 안 가로 · 세로 가운데에 회색으로 놓인다. */
+  height: 59px;
+  color: #666;
+  font-size: 23.6px;
+  /* 한글은 이 방 규칙대로 나눔스퀘어라운드 ExtraBold 한 가지다(사장님 10-02). OX 의 400 을 옮기지 않았다. */
+  font-weight: 800;
+  line-height: 1;
+}
+
+.incorrect-answer-header > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+/* 뜻 제목은 뜻 글자가 놓이는 자리(칸 왼쪽 여백 뒤)의 가운데에 둔다. */
+.incorrect-answer-header > span:nth-child(3) {
+  padding-left: 37.4px;
+}
+
+/* 사장님 2026-10-12 "틀린 수가 많으면 박스 이미지를 벗어 나는 문제 수정": 목록 창은 회색 띠 아래(158px)에서
+   팝업 그림의 아래 모서리가 둥글어지기 시작하는 곳(951px)까지만 쓴다 — 높이 793px. 그 전에는 흰 바탕 끝(971px)까지 써서
+   아홉째 줄이 아래 테두리에 걸려 잘려 보였고, 네모난 목록 귀퉁이가 둥근 모서리를 덮었다(OX 값 813px 을 그대로 옮긴 탓).
+   줄 높이를 88.1px 로 잡아(OX 는 93.1px) 아홉 줄이 잘리지 않고 딱 들어간다. 그보다 많으면 이 창 안에서 스크롤한다. */
+.incorrect-answer-list {
+  height: 793px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: #fff;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 넘칠 때 스크롤 막대가 늘 보여야 "아래에 더 있다"를 알 수 있다. 크롬 · 사파리는 아래 ::-webkit-scrollbar 로 그린 막대가
+   늘 보인다. scrollbar-color 를 같이 주면 크롬이 그 막대 대신 평소에는 숨는 기본 막대를 써서(맥) 안 보였다 —
+   그래서 표준 속성은 ::-webkit-scrollbar 를 모르는 브라우저(파이어폭스)에만 준다. */
+@supports not selector(::-webkit-scrollbar) {
+  .incorrect-answer-list {
+    scrollbar-color: #bcbcbc #f2f2f2;
+    scrollbar-width: auto;
+  }
+}
+
+.incorrect-answer-list::-webkit-scrollbar {
+  width: 19px;
+}
+
+.incorrect-answer-list::-webkit-scrollbar-track {
+  background: #f2f2f2;
+}
+
+.incorrect-answer-list::-webkit-scrollbar-thumb {
+  border: 3px solid #f2f2f2;
+  border-radius: 999px;
+  background: #bcbcbc;
+}
+
+/* 줄은 흰 바탕 그대로다 — 배경색 · 둥근 모서리 · 구분선 · 줄 사이 틈이 없다.
+   줄 높이는 목록 창(793px)에 아홉 줄이 딱 들어가는 88.1px 이다(OX 는 93.1px). 뜻이 두 줄(71px)이어도 이 높이 안에 든다. */
+.incorrect-answer-row {
+  min-height: 88.1px;
+  color: #111;
+  font-size: 27.3px;
+}
+
+.incorrect-answer-cell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 88.1px;
+  padding: 0;
+}
+
+.incorrect-answer-audio {
+  justify-content: flex-start;
+  /* 누르는 자리(53.8px)의 가운데가 팝업 폭의 5% 에 온다(31.5 + 26.9 = 58.4px, 표 왼쪽 기준). 전에는 104.8px 였다. */
+  padding: 0 0 0 31.5px;
+}
+
+.incorrect-answer-speaker {
+  display: grid;
+  width: 53.8px;
+  height: 53.8px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  /* 원은 그리지 않는다 — 파란 스피커 그림만 보인다. 누르는 자리 크기는 그대로 둔다(칸이 좁아도 줄어들지 않게). */
+  flex: 0 0 auto;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.incorrect-answer-speaker:hover:not(:disabled),
+.incorrect-answer-speaker:focus-visible:not(:disabled) {
+  outline: 4px solid rgb(90 106 216 / 35%);
+  filter: brightness(1.08);
+}
+
+.incorrect-answer-speaker:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.incorrect-answer-speaker img {
+  display: block;
+  /* 그림(37×30)의 비율 그대로, 팝업 폭의 2.4%. 색은 그림의 파란색 그대로다(전에는 흰색으로 칠했다). */
+  width: 32.3px;
+  height: 26.2px;
+  pointer-events: none;
+}
+
+.incorrect-answer-word {
+  justify-content: center;
+  padding: 0 9.6px;
+  /* 영어 단어 칸이지만 데이터에 한글 단어가 오면 한글은 나눔으로 그린다(사장님 10-02 한글 표기 전부). 영어는 Lexend 그대로다. */
+  /* 사장님 2026-10-15 "1번으로 통일 해": 레이싱처럼 보통 굵기 — 영어는 Lexend Regular, 한글은 나눔 B 파일(위 @font-face). */
+  font-family: "Lexend Regular Game", "NanumSquareRound B Game", "NanumSquareRound Game", Arial, system-ui, sans-serif;
+  /* 단어 크기는 팝업 폭의 2.2%(OX 1.56cqw). 배율만 곱해 긴 단어를 칸에 맞춘다. */
+  font-size: calc(30px * var(--incorrect-word-scale, 1));
+  font-weight: 400;
+  line-height: 1.08;
+  text-align: center;
+}
+
+.incorrect-answer-word-text {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.incorrect-answer-meaning {
+  /* 뜻은 팝업 폭의 40.1% 에서 시작한다(단어 칸과 37.4px 띄움). 글자 크기와 색은 줄이 정한다. */
+  padding-right: 19.2px;
+  padding-left: 37.4px;
+  /* 사장님 2026-10-15 "1번으로 통일 해": 레이싱처럼 뜻은 나눔스퀘어라운드 B 파일로 보통 굵기(500)다. */
+  font-family: "NanumSquareRound B Game", "NanumSquareRound Game", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  font-weight: 500;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.incorrect-answer-empty {
+  display: grid;
+  height: 100%;
+  margin: 0;
+  place-items: center;
+  color: #777;
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.ranking-dialog[hidden],
+.ranking-member-summary[hidden],
+.ranking-status[hidden],
+.ranking-table[hidden] {
+  display: none;
+}
+
+.ranking-dialog {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  font-family: "Sofia Pro Soft Game", "NanumSquareRound Game", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  font-style: normal;
+}
+
+.ranking-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background:
+    radial-gradient(circle at 50% 28%, rgb(29 119 215 / 24%), transparent 44%),
+    rgb(1 12 41 / 72%);
+  backdrop-filter: blur(4px);
+  cursor: default;
+}
+
+.ranking-modal {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  width: 1320px;
+  height: 890px;
+  padding: 0 42px 38px;
+  overflow: hidden;
+  border: 10px solid #2b77e7;
+  border-radius: 48px;
+  background:
+    linear-gradient(180deg, #102f78 0 168px, #edfaff 168px 100%);
+  box-shadow:
+    inset 0 0 0 4px rgb(156 231 255 / 78%),
+    0 24px 0 rgb(4 44 121 / 88%);
+  color: #173765;
+  transform: translateX(-50%);
+}
+
+.ranking-modal-header {
+  position: relative;
+  display: grid;
+  min-height: 158px;
+  padding: 28px 105px 25px;
+  align-content: center;
+  justify-items: center;
+}
+
+
+.ranking-modal-header h2 {
+  margin: 8px 0 0;
+  color: #fff;
+  font-family: "Lexend Game", Arial, system-ui, sans-serif;
+  font-size: 60px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 1;
+  text-shadow: 0 5px 0 #09215d;
+}
+
+.ranking-close {
+  /* 형제 프로젝트 공통 규약: 모달 안쪽 상단 우측 30px 여백.
+     (형제는 컨테이너 폭 기준 1.55cqw 를 쓰며 스테이지 폭 1920px 기준 약 30px) */
+  position: absolute;
+  top: 30px;
+  right: 30px;
+  z-index: 3;
+  width: 77px;
+  height: 87px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: filter 130ms ease, transform 130ms ease;
+}
+
+.ranking-close:hover,
+.ranking-close:focus-visible {
+  outline: none;
+  filter: brightness(1.1);
+  transform: translateY(-3px) scale(1.04);
+}
+
+.ranking-close:active {
+  transform: translateY(3px) scale(0.97);
+}
+
+.ranking-close img {
+  display: block;
+  width: 77px;
+  height: 87px;
+  pointer-events: none;
+}
+
+.ranking-member-summary {
+  display: grid;
+  grid-template-columns: 104px 150px minmax(0, 1fr) 250px;
+  min-height: 126px;
+  margin: 18px 0 22px;
+  padding: 14px 30px;
+  align-items: center;
+  border: 4px solid #9ddff7;
+  border-radius: 28px;
+  background: linear-gradient(135deg, #fffdf2, #fff3b7);
+}
+
+.ranking-member-badge {
+  display: grid;
+  width: 80px;
+  height: 80px;
+  overflow: hidden;
+  place-items: center;
+  border: 4px solid #ffc12f;
+  border-radius: 50%;
+  background: #fff;
+  color: #ffad00;
+  font-size: 46px;
+  line-height: 1;
+}
+
+.ranking-member-badge img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+}
+
+.ranking-member-label {
+  color: #f39b13;
+  font-family: "Lexend Game", Arial, system-ui, sans-serif;
+  font-size: 25px;
+  font-weight: 600;
+}
+
+.ranking-member-name {
+  min-width: 0;
+  overflow: hidden;
+  color: #243b65;
+  font-size: 34px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ranking-member-score {
+  color: #f2269d;
+  font-family: "Lexend Game", Arial, system-ui, sans-serif;
+  font-size: 39px;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ranking-member-score::after,
+.ranking-row-score::after {
+  margin-left: 7px;
+  color: #5c6474;
+  font-family: "NanumSquareRound Game", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  font-size: 0.7em;
+  font-weight: 700;
+  content: "점";
+}
+
+.ranking-status {
+  display: grid;
+  min-height: 0;
+  place-items: center;
+  border: 4px solid #caedf8;
+  border-radius: 28px;
+  background: #fff;
+  color: #31547c;
+  font-size: 31px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.ranking-status.is-error {
+  color: #a93b45;
+  background: #fff3f4;
+}
+
+.ranking-table {
+  display: grid;
+  grid-template-rows: 70px minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+  border: 4px solid #9ddff7;
+  border-radius: 28px;
+  background: #fff;
+}
+
+.ranking-grid {
+  display: grid;
+  grid-template-columns: 120px 84px minmax(0, 1fr) 250px;
+  align-items: center;
+}
+
+.ranking-table-header {
+  padding-right: 18px;
+  border-bottom: 3px solid #d9eef6;
+  background: #dff6ff;
+  color: #46627f;
+  font-size: 25px;
+  font-weight: 800;
+}
+
+.ranking-table-header > span {
+  min-width: 0;
+  text-align: center;
+}
+
+.ranking-list {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-snap-type: y mandatory;
+  scrollbar-color: #78bde4 #edf8fc;
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ranking-list:focus-visible {
+  outline: 4px solid rgb(43 119 231 / 35%);
+  outline-offset: -4px;
+}
+
+.ranking-list::-webkit-scrollbar {
+  width: 18px;
+}
+
+.ranking-list::-webkit-scrollbar-track {
+  background: #edf8fc;
+}
+
+.ranking-list::-webkit-scrollbar-thumb {
+  border: 3px solid #edf8fc;
+  border-radius: 999px;
+  background: #78bde4;
+}
+
+.ranking-row {
+  height: 86px;
+  min-height: 86px;
+  padding-right: 18px;
+  border-bottom: 2px solid #e6f1f5;
+  background: #fff;
+  color: #31465e;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+.ranking-row:last-child {
+  border-bottom: 0;
+}
+
+.ranking-row.is-top-three {
+  background: linear-gradient(90deg, rgb(255 240 160 / 50%), #fff 48%);
+}
+
+.ranking-cell {
+  min-width: 0;
+  padding: 12px 18px;
+  font-size: 29px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.ranking-row-rank {
+  color: #2456a7;
+  /* "1위" 처럼 숫자 뒤에 한글이 붙는다. 숫자는 Lexend 그대로, '위'는 나눔으로 그린다(사장님 10-02 한글 표기 전부). */
+  font-family: "Lexend Game", "NanumSquareRound Game", Arial, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.ranking-row.is-rank-1 .ranking-row-rank {
+  color: #e79b00;
+}
+
+.ranking-row.is-rank-2 .ranking-row-rank {
+  color: #778799;
+}
+
+.ranking-row.is-rank-3 .ranking-row-rank {
+  color: #b56b39;
+}
+
+.ranking-row-badge {
+  display: grid;
+  padding: 6px;
+  place-items: center;
+  color: #79a0c6;
+  font-size: 34px;
+}
+
+.ranking-row-badge img {
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+}
+
+.ranking-row-name {
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ranking-row-score {
+  color: #273d58;
+  font-family: "Lexend Game", Arial, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums lining-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ranking-empty {
+  display: grid;
+  height: 100%;
+  min-height: 180px;
+  margin: 0;
+  place-items: center;
+  color: #6f7f91;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 시작 버튼 — 기준 방(OX 퀴즈) 그림과 효과에 맞춘다. 글자는 그림에 들어 있어 라벨은 읽기용으로만 둔다. */
+.start-menu-button {
+  position: relative;
+  width: 100%;
+  height: 114px;
+  padding: 0;
+  border: 0;
+  border-radius: 40px;
+  background: transparent no-repeat center / contain;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: filter 130ms ease, transform 130ms ease;
+}
+
+.start-menu-button > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.start-menu-button-play {
+  background-image: url("assets/start/btn_start.png");
+}
+
+.start-menu-button-ranking {
+  background-image: url("assets/start/btn_ranking.png");
+}
+
+/* 유리 광택: 버튼 그림의 알파를 마스크로 써서 알약 모양에 정확히 맞춘다. */
+.start-menu-button:not(:disabled)::after {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(100deg, transparent 38%, rgb(255 255 255 / 62%) 50%, transparent 62%)
+    no-repeat;
+  background-size: 300% 100%;
+  content: "";
+  -webkit-mask: var(--sheen-mask) no-repeat center / contain;
+  mask: var(--sheen-mask) no-repeat center / contain;
+  animation: startButtonShine 4200ms linear infinite;
+  pointer-events: none;
+}
+
+.start-menu-button-play:not(:disabled)::after {
+  --sheen-mask: url("assets/start/btn_start.png");
+}
+
+.start-menu-button-ranking:not(:disabled)::after {
+  --sheen-mask: url("assets/start/btn_ranking.png");
+  /* 두 버튼이 같이 번쩍이지 않게 시차를 둔다. */
+  animation-delay: 1100ms;
+}
+
+.start-menu-button:hover:not(:disabled),
+.start-menu-button:focus-visible:not(:disabled) {
+  filter: brightness(1.07);
+  transform: translateY(-4px) scale(1.02);
+}
+
+.start-menu-button:focus-visible:not(:disabled) {
+  outline: 5px solid rgb(255 255 255 / 52%);
+  outline-offset: 3.5px;
+}
+
+.start-menu-button:active:not(:disabled),
+.start-menu-button.is-pressed:not(:disabled) {
+  filter: brightness(0.97);
+  transform: translateY(4px) scale(0.99);
+}
+
+.start-menu-button:disabled {
+  cursor: default;
+  filter: grayscale(0.35);
+  opacity: 0.62;
+}
+
+@keyframes startButtonShine {
+  0% {
+    background-position: 160% 0;
+  }
+
+  100% {
+    background-position: -60% 0;
+  }
+}
+
+@keyframes startMenuEnter {
+  from {
+    opacity: 0;
+    filter: blur(3px);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+.status-toast {
+  position: absolute;
+  bottom: 31px;
+  left: 50%;
+  z-index: 30;
+  min-width: 280px;
+  padding: 15px 30px 17px;
+  border: 3px solid rgb(255 255 255 / 45%);
+  border-radius: 999px;
+  background: rgb(4 22 68 / 82%);
+  box-shadow: 0 12px 28px rgb(0 0 0 / 28%);
+  color: #fff;
+  font-size: 24px;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 16px);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.status-toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* 2차 검수 공통-14(사장님 2026-10-12 "가로 방향으로 돌려달라고 하는 부분 빼자"): 세로로 들었을 때 뜨던
+   "화면을 가로로 돌려 주세요" 안내(.rotate-guide)와 그 세로 미디어 규칙을 없앴다. 세로에서도 무대가 폭에 맞춰 그대로 보이고 눌린다.
+   화면이 돌 때 무대 크기를 다시 맞추는 것(resizeStage)은 그대로다. */
+
+@keyframes light-breathe {
+  from {
+    opacity: 0.72;
+  }
+  to {
+    opacity: 0.94;
+  }
+}
+
+@keyframes loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes logo-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-32px) scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes logo-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-9px);
+  }
+}
+
+@keyframes clock-tick {
+  0%,
+  77%,
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+  83% {
+    transform: rotate(-3deg) scale(1.03);
+  }
+  90% {
+    transform: rotate(3deg) scale(1.03);
+  }
+  96% {
+    transform: rotate(-1deg) scale(1.01);
+  }
+}
+
+@keyframes clock-urgent {
+  0%,
+  100% {
+    transform: rotate(-4deg) scale(1.02);
+  }
+  50% {
+    transform: rotate(4deg) scale(1.07);
+  }
+}
+
+@keyframes clock-critical {
+  0%,
+  100% {
+    transform: translateX(-3px) rotate(-6deg) scale(1.05);
+  }
+  50% {
+    transform: translateX(3px) rotate(6deg) scale(1.11);
+  }
+}
+
+@keyframes clock-finish {
+  0% {
+    transform: scale(1);
+  }
+  38% {
+    transform: scale(0.82) rotate(-5deg);
+  }
+  72% {
+    transform: scale(1.16) rotate(4deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes ball-goal-left {
+  0%,
+  30% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  52% {
+    transform: translate(-126px, -188px) rotate(-360deg) scale(0.63);
+  }
+  66% {
+    transform: translate(-230px, -286px) rotate(-650deg) scale(0.4);
+  }
+  72% {
+    transform: translate(-258px, -318px) rotate(-720deg) scale(0.34);
+  }
+  78% {
+    transform: translate(-262px, -314px) rotate(-735deg) scale(0.36, 0.3);
+  }
+  86%,
+  100% {
+    transform: translate(-258px, -318px) rotate(-735deg) scale(0.34);
+  }
+}
+
+@keyframes ball-goal-right {
+  0%,
+  30% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  52% {
+    transform: translate(128px, -188px) rotate(360deg) scale(0.63);
+  }
+  66% {
+    transform: translate(233px, -286px) rotate(650deg) scale(0.4);
+  }
+  72% {
+    transform: translate(262px, -318px) rotate(720deg) scale(0.34);
+  }
+  78% {
+    transform: translate(266px, -314px) rotate(735deg) scale(0.36, 0.3);
+  }
+  86%,
+  100% {
+    transform: translate(262px, -318px) rotate(735deg) scale(0.34);
+  }
+}
+
+@keyframes ball-save-left {
+  0%,
+  30% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  52% {
+    transform: translate(-94px, -135px) rotate(-260deg) scale(0.78);
+  }
+  62% {
+    transform: translate(-141px, -204px) rotate(-370deg) scale(0.68);
+  }
+  66% {
+    transform: translate(-153px, -221px) rotate(-405deg) scale(0.66);
+  }
+  72% {
+    transform: translate(-153px, -221px) rotate(-420deg) scale(0.62, 0.7);
+  }
+  80%,
+  100% {
+    transform: translate(-153px, -221px) rotate(-420deg) scale(0.66);
+  }
+}
+
+@keyframes ball-save-right {
+  0%,
+  30% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  52% {
+    transform: translate(112px, -135px) rotate(260deg) scale(0.78);
+  }
+  62% {
+    transform: translate(169px, -204px) rotate(370deg) scale(0.68);
+  }
+  66% {
+    transform: translate(184px, -221px) rotate(405deg) scale(0.66);
+  }
+  72% {
+    transform: translate(184px, -221px) rotate(420deg) scale(0.62, 0.7);
+  }
+  80%,
+  100% {
+    transform: translate(184px, -221px) rotate(420deg) scale(0.66);
+  }
+}
+
+@keyframes goalkeeper-save-left {
+  0%,
+  34% {
+    transform: translate(0, 0) scale(1);
+  }
+  52% {
+    transform: translate(-58px, -28px) scale(1.01);
+  }
+  62% {
+    transform: translate(-104px, -52px) scale(1.04);
+  }
+  /* 66% = 594ms. 선방 이미지로 교체되는 시점이자 다이빙 정점. */
+  66% {
+    transform: translate(-112px, -58px) scale(1.05);
+  }
+  /* 서 있는 자세로 바뀐 뒤에는 지면으로 내려온다. 옆으로 던진 가로 이동은 유지. */
+  100% {
+    transform: translate(-112px, 0) scale(1);
+  }
+}
+
+@keyframes goalkeeper-save-right {
+  0%,
+  34% {
+    transform: translate(0, 0) scale(1);
+  }
+  52% {
+    transform: translate(58px, -28px) scale(1.01);
+  }
+  62% {
+    transform: translate(104px, -52px) scale(1.04);
+  }
+  /* 66% = 594ms. 선방 이미지로 교체되는 시점이자 다이빙 정점. */
+  66% {
+    transform: translate(112px, -58px) scale(1.05);
+  }
+  /* 서 있는 자세로 바뀐 뒤에는 지면으로 내려온다. 옆으로 던진 가로 이동은 유지. */
+  100% {
+    transform: translate(112px, 0) scale(1);
+  }
+}
+
+@keyframes goalkeeper-miss-left {
+  0%,
+  34% {
+    transform: translate3d(0, 0, 0);
+    animation-timing-function: cubic-bezier(0.2, 0.72, 0.2, 1);
+  }
+  100% {
+    transform: translate3d(-170px, 0, 0);
+  }
+}
+
+@keyframes goalkeeper-miss-right {
+  0%,
+  34% {
+    transform: translate3d(0, 0, 0);
+    animation-timing-function: cubic-bezier(0.2, 0.72, 0.2, 1);
+  }
+  100% {
+    transform: translate3d(170px, 0, 0);
+  }
+}
+
+@keyframes goalkeeper-body-miss-left {
+  0%,
+  34% {
+    transform: translate3d(0, 0, 0) scale(1);
+    animation-timing-function: cubic-bezier(0.3, 0, 0.2, 1);
+  }
+  40% {
+    transform: translate3d(0, 4px, 0) scale(1.02, 0.96);
+    animation-timing-function: cubic-bezier(0.18, 0.72, 0.2, 1);
+  }
+  72% {
+    transform: translate3d(0, -64px, 0) scale(1);
+    animation-timing-function: cubic-bezier(0.35, 0, 0.25, 1);
+  }
+  /* 76% = 684ms. 실점 이미지로 교체되는 시점. 여기까지가 떠오름. */
+  76% {
+    transform: translate3d(0, -56px, 0) scale(1);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.3, 1);
+  }
+  /* 서 있는 자세로 바뀐 뒤에는 지면으로 내려온다. */
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes goalkeeper-body-miss-right {
+  0%,
+  34% {
+    transform: translate3d(0, 0, 0) scale(1);
+    animation-timing-function: cubic-bezier(0.3, 0, 0.2, 1);
+  }
+  40% {
+    transform: translate3d(0, 4px, 0) scale(1.02, 0.96);
+    animation-timing-function: cubic-bezier(0.18, 0.72, 0.2, 1);
+  }
+  72% {
+    transform: translate3d(0, -64px, 0) scale(1);
+    animation-timing-function: cubic-bezier(0.35, 0, 0.25, 1);
+  }
+  /* 76% = 684ms. 실점 이미지로 교체되는 시점. 여기까지가 떠오름. */
+  76% {
+    transform: translate3d(0, -56px, 0) scale(1);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.3, 1);
+  }
+  /* 서 있는 자세로 바뀐 뒤에는 지면으로 내려온다. */
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes feedback-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 28px) scale(0.72);
+  }
+  28%,
+  78% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.08);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -16px) scale(1);
+  }
+}
+
+@keyframes combo-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 25px) scale(0.65) rotate(-5deg);
+  }
+  30%,
+  72% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.05) rotate(2deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -20px) scale(1);
+  }
+}
+
+@keyframes combo-ball-activate {
+  0% {
+    transform: scale(0.76);
+  }
+  58% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes combo-silhouette-glow {
+  0% {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  42% {
+    opacity: 0.52;
+    transform: scale(1.06);
+  }
+  100% {
+    opacity: 0.18;
+    transform: scale(1.01);
+  }
+}
+
+@keyframes combo-ball-one-glass {
+  0% {
+    opacity: 0;
+    background-position: 140% 0;
+  }
+  28% {
+    opacity: 0.68;
+  }
+  72% {
+    opacity: 0.46;
+  }
+  100% {
+    opacity: 0.18;
+    background-position: 32% 0;
+  }
+}
+
+@keyframes combo-ball-two-glass {
+  0% {
+    opacity: 0;
+    background-position: -140% 0;
+  }
+  28% {
+    opacity: 0.66;
+  }
+  72% {
+    opacity: 0.44;
+  }
+  100% {
+    opacity: 0.18;
+    background-position: 68% 0;
+  }
+}
+
+@keyframes combo-bonus-glow {
+  0% {
+    opacity: 0;
+    transform: scale(0.84);
+  }
+  45% {
+    opacity: 0.62;
+    transform: scale(1.09);
+  }
+  100% {
+    opacity: 0.24;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes combo-bonus-glint {
+  0% {
+    opacity: 0;
+  }
+  34% {
+    opacity: 0.62;
+  }
+  68% {
+    opacity: 0.24;
+  }
+  100% {
+    opacity: 0.18;
+  }
+}
+
+@keyframes combo-bonus-burst {
+  0% {
+    transform: scale(0.72);
+  }
+  34% {
+    transform: scale(1.32);
+  }
+  56% {
+    transform: scale(0.94);
+  }
+  76% {
+    transform: scale(1.09);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes combo-bonus-flare {
+  0% {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+  38% {
+    opacity: 0.74;
+    transform: scale(1.42);
+  }
+  100% {
+    opacity: 0.18;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes result-overlay-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes result-title-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-24px) scale(0.78);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+
+  /* 최종 테스트 후속(OX 와 같이): 공 위 정답 점수와 보너스 표기의 떠오름은 마지막 장면이 투명이다.
+     위의 1ms 규칙과 만나면 뜨자마자 투명해져 아예 안 보였다. 움직임만 빼고 그 자리에 보여 준다.
+     숨기는 것은 스크립트(0.9초 타이머, 다음 문제의 resetActionScene)가 그대로 한다. */
+  .combo-step-gain.is-showing {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+
+  /* 정답/오답 판정 글자(feedback-pop)도 마지막 장면이 투명이라 같은 이유로 안 보였다(사장님: 고쳐).
+     다음 문제의 resetActionScene 이 className 을 되돌려 숨긴다. 서 있는 자세는 각 떠오름의 가운데 장면과 같다. */
+  .feedback-text.is-visible {
+    animation: none !important;
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.08);
+  }
+
+  .combo-text.is-visible {
+    animation: none !important;
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.05) rotate(2deg);
+  }
+
+  /* Score 상자의 보너스 효과도 마지막 장면이 투명이라 위의 1ms 규칙과 만나면 보이지 않는다.
+     움직임만 빼고 금빛 테두리 · 반짝임을 그 자리에 보여 주고, 숫자는 커지지 않고 금색만 된다.
+     걷는 것은 스크립트(clearScoreBonus 타이머)가 그대로 한다. */
+  .score-burst.is-playing,
+  .score-burst.is-playing::before,
+  .score-burst.is-playing::after {
+    animation: none !important;
+    opacity: 1;
+  }
+
+  .score-value.is-bonus-punch {
+    animation: none !important;
+    color: #ffe260;
+  }
+}

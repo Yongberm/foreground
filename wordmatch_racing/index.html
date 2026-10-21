@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="theme-color" content="#1f8fd6" />
+    <meta name="description" content="자동차를 좌우로 옮겨 영어 단어의 뜻 상자만 지나가는 Word Match 레이싱" />
+    <title>Word Match - 레이싱</title>
+    <link rel="icon" href="asset/game/car-red.png" />
+    <link rel="stylesheet" href="styles.css?v=20261015-2" />
+  </head>
+  <body>
+    <main class="viewport">
+      <h1 class="sr-only">Word Match Racing</h1>
+      <section id="game-stage" class="game-stage" aria-label="자동차를 좌우로 옮겨 영어 단어의 뜻 상자만 지나가는 게임">
+        <p id="status-toast" class="status-toast" role="status" aria-live="polite"></p>
+
+        <button
+          id="sound-button"
+          class="global-control sound-button"
+          type="button"
+          aria-label="소리 끄기"
+          aria-pressed="true"
+          hidden
+        >
+          <img id="sound-icon" src="asset/btn_sound_on.png" alt="" width="66" height="69" draggable="false" />
+        </button>
+
+        <button
+          id="navigation-button"
+          class="global-control navigation-button"
+          type="button"
+          aria-label="게임 닫기"
+          hidden
+        >
+          <img id="navigation-icon" src="asset/btn_close.png" alt="" width="66" height="69" draggable="false" />
+        </button>
+
+        <!--
+          시작 화면. 좌표는 시안 docs/preview_start.png 를 실측한 값이다(각 그림의 불투명
+          경계와 시안의 경계를 맞춤). 깃발 → 트로피 → 로고 순으로 겹친다(사용자 지시).
+        -->
+        <section id="start-screen" class="screen start-screen" aria-label="시작 화면" hidden>
+          <img class="start-background" src="asset/start/start_bg.png" alt="" width="1920" height="1080" draggable="false" />
+          <!--
+            시작 화면 연출(사용자 지시 2026-09-04: 연출이 낡아 보임). 색종이 조각은 script.js 가 만들고,
+            트로피 뒤 빛·광택, 자동차 배기 연기는 아래 장식 요소를 CSS 가 움직인다. 로고·트로피는 등장만
+            움직이고 그 뒤로는 가만히 있다(사용자 지시: 로고 쪽 반복 움직임이 부자연스러움).
+            겹침은 그대로: 깃발(1) → 트로피(2) → 로고(3). 빛은 깃발 뒤, 광택은 트로피 위.
+          -->
+          <div class="start-confetti" id="start-confetti" aria-hidden="true"></div>
+          <span class="start-trophy-glow" aria-hidden="true"></span>
+          <span class="start-trophy" aria-hidden="true"></span>
+          <span class="start-trophy-shine" aria-hidden="true"></span>
+          <img class="start-flag start-flag-left" src="asset/start/left_flag.png" alt="" width="470" height="426" draggable="false" />
+          <img class="start-flag start-flag-right" src="asset/start/right_flag.png" alt="" width="470" height="426" draggable="false" />
+          <img
+            class="start-logo"
+            src="asset/start/logo.png"
+            alt="Word Match"
+            width="758"
+            height="451"
+            draggable="false"
+          />
+          <img class="start-car start-car-red" src="asset/start/car_1.png" alt="" width="131" height="157" draggable="false" />
+          <span class="start-exhaust start-exhaust-red" style="--px: 572px; --py: 940px; --pd: 1.7s" aria-hidden="true"></span>
+          <span class="start-exhaust start-exhaust-red" style="--px: 584px; --py: 940px; --pd: 2.25s" aria-hidden="true"></span>
+          <span class="start-exhaust start-exhaust-red" style="--px: 578px; --py: 940px; --pd: 2.8s" aria-hidden="true"></span>
+          <img class="start-car start-car-green" src="asset/start/car_2.png" alt="" width="95" height="137" draggable="false" />
+          <span class="start-exhaust start-exhaust-green" style="--px: 1266px; --py: 1058px; --pd: 1.9s" aria-hidden="true"></span>
+          <span class="start-exhaust start-exhaust-green" style="--px: 1278px; --py: 1058px; --pd: 2.45s" aria-hidden="true"></span>
+          <span class="start-exhaust start-exhaust-green" style="--px: 1272px; --py: 1058px; --pd: 3s" aria-hidden="true"></span>
+
+          <!--
+            2차 검수 공통-9(사장님 2026-10-12 "배치는 시작화면 로고와 버튼 사이"): 동화 정보.
+            info API 의 title(시리즈) · subtitle(동화 제목)을 script.js 가 채운다. 둘 다 없으면 통째로 감춘다.
+          -->
+          <div id="start-story" class="start-story" role="group" aria-label="동화 정보" hidden>
+            <p id="start-story-title" class="start-story-line start-story-title"></p>
+            <p id="start-story-subtitle" class="start-story-line start-story-subtitle"></p>
+          </div>
+
+          <nav class="start-menu" aria-label="시작 메뉴">
+            <button id="start-button" class="start-menu-button start-menu-button-play" type="button" style="--i: 0" aria-busy="true" disabled>
+              <span>Start</span>
+            </button>
+            <button id="start-ranking-button" class="start-menu-button start-menu-button-ranking" type="button" style="--i: 1" disabled>
+              <span>Ranking</span>
+            </button>
+          </nav>
+
+          <button id="help-button" class="start-help-button" type="button" aria-label="도움말" disabled>
+            <img src="asset/btn_help.png" alt="" width="62" height="63" draggable="false" />
+          </button>
+        </section>
+
+        <!-- 자동차 고르기. 시안 docs/preview_select_car.png: popup(1208x568) 을 (356,256)에, 타일 320x320 셋. -->
+        <div id="car-select-dialog" class="car-select-dialog" hidden>
+          <button id="car-select-backdrop" class="car-select-backdrop" type="button" tabindex="-1" aria-label="자동차 고르기 닫기"></button>
+          <section class="car-select-popup" role="dialog" aria-modal="true" aria-labelledby="car-select-title">
+            <h2 id="car-select-title" class="sr-only">Select Car</h2>
+            <img class="car-select-frame" src="asset/game/popup.png" alt="" width="1208" height="568" draggable="false" />
+            <button class="car-tile" type="button" data-car="red" style="--tile-index: 0" aria-label="빨간 자동차 1번" aria-pressed="true">
+              <img src="asset/game/select_car01.png" alt="" width="320" height="320" draggable="false" />
+            </button>
+            <button class="car-tile" type="button" data-car="blue" style="--tile-index: 1" aria-label="파란 자동차 2번" aria-pressed="false">
+              <img src="asset/game/select_car02.png" alt="" width="320" height="320" draggable="false" />
+            </button>
+            <button class="car-tile" type="button" data-car="green" style="--tile-index: 2" aria-label="초록 자동차 3번" aria-pressed="false">
+              <img src="asset/game/select_car03.png" alt="" width="320" height="320" draggable="false" />
+            </button>
+          </section>
+        </div>
+
+        <!-- 도움말. 형제 방과 같이 팝업이 아니라 전용 배경의 전체 화면이다. -->
+        <section
+          id="help-screen"
+          class="screen help-screen"
+          role="dialog"
+          aria-labelledby="help-screen-title"
+          hidden
+        >
+          <img class="help-background" src="asset/guide/help_bg.png" alt="" width="1920" height="1080" draggable="false" />
+          <h2 id="help-screen-title" class="sr-only">도움말</h2>
+          <div class="help-content-viewport" tabindex="0">
+            <div id="help-content" class="help-content"></div>
+            <div id="help-status" class="help-status" role="status" aria-live="polite">
+              <span id="help-status-message">도움말을 불러오는 중입니다.</span>
+              <button id="help-retry-button" class="help-retry-button" type="button" hidden>Retry</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 게임 화면. 좌표는 docs/preview_ready.png 실측값이다. 줄(보기·장애물)은 script.js 가 만든다. -->
+        <section id="play-screen" class="screen play-screen" aria-label="레이싱" hidden>
+          <!--
+            배경(풍경·도로·연석·차선이 한 그림) 전체가 줄과 같은 속도로 흐른다. 타일 순서(bg1 → bg2 → bg2 → bg2
+            반복)는 script.js 의 SCENE_PATTERN 이 만든다. 별도 도로 띠나 점선 오버레이는 없다.
+          -->
+          <div class="scene-scroll" aria-hidden="true">
+            <div id="scene-track" class="scene-track"></div>
+          </div>
+
+          <div id="road-items" class="road-items" aria-hidden="true"></div>
+          <div id="effects-layer" class="effects-layer" aria-hidden="true"></div>
+
+          <div id="car" class="car" data-lane="1" aria-hidden="true">
+            <img id="car-image" class="car-image" src="asset/game/car-red.png" alt="" width="166" height="204" draggable="false" />
+            <!-- 배기 연기(사용자 지시 2026-09-04): 꽁무니 두 배기구에서 연기가 아래로 흩어진다. 자동차 안에 있어 차선을 따라간다. -->
+            <span class="car-exhaust" style="--ex: 62px; --ed: 0s; --edx: -5px" aria-hidden="true"></span>
+            <span class="car-exhaust" style="--ex: 62px; --ed: 0.4s; --edx: 3px" aria-hidden="true"></span>
+            <span class="car-exhaust" style="--ex: 104px; --ed: 0.2s; --edx: 5px" aria-hidden="true"></span>
+            <span class="car-exhaust" style="--ex: 104px; --ed: 0.6s; --edx: -3px" aria-hidden="true"></span>
+          </div>
+
+          <!--
+            문제 배너. question.png 는 원본 그대로 쓴다(사용자 지시). 2026-09-04 판은 글자판이
+            비어 있어 덮개는 투명이고 단어만 놓는다. 아래 신호등(사용자 지시): 하우징의 소켓
+            3개 위에 왼쪽부터 빨강·노랑·초록 램프(blinker_*.png)를 올리고, 판정 순간 하나만
+            켜졌다가 꺼진다 — 정답 초록, 오답 빨강, 장애물 충돌·문제 놓침 노랑.
+          -->
+          <img class="question-banner" src="asset/game/question.png" alt="" width="935" height="258" draggable="false" />
+          <div class="question-word-cover" aria-hidden="true">
+            <strong id="question-word" class="question-word"></strong>
+          </div>
+          <div id="traffic-light" class="traffic-light" aria-hidden="true">
+            <img class="traffic-lamp" data-lamp="red" src="asset/game/blinker_red.png" alt="" width="60" height="60" draggable="false" />
+            <img class="traffic-lamp" data-lamp="yellow" src="asset/game/blinker_yellow.png" alt="" width="60" height="60" draggable="false" />
+            <img class="traffic-lamp" data-lamp="green" src="asset/game/blinker_green.png" alt="" width="60" height="60" draggable="false" />
+          </div>
+
+          <div id="combo-meter" class="combo-meter" aria-label="연속 정답 0단계">
+            <span class="combo-pip" aria-hidden="true"></span>
+            <span class="combo-pip" aria-hidden="true"></span>
+            <span class="combo-pip" aria-hidden="true"></span>
+            <!-- 2차 수정(공통 기준): 첫째·둘째 알 위에 정답 점수, 셋째 알 위에 BONUS 와 보너스 점수. 알 중심마다 놓는다. -->
+            <strong class="combo-gain" style="--pip: 0" aria-hidden="true"></strong>
+            <strong class="combo-gain" style="--pip: 1" aria-hidden="true"></strong>
+            <!-- 검수표 r11: 3연속 보너스는 정답 점수와 따로 금빛으로 터진다. 2차 수정으로 셋째 알 위에 뜬다. -->
+            <strong id="bonus-float" class="bonus-float" style="--pip: 2" aria-hidden="true"><span class="bonus-float-label">BONUS</span><span id="bonus-float-value" class="bonus-float-value"></span></strong>
+          </div>
+
+          <img class="play-fox" src="asset/game/img.png" alt="" width="240" height="248" draggable="false" />
+
+          <!-- 점수·시간 게이지 (Word Melody 방식: 점수와 남은 시간만 보여 준다). -->
+          <img class="score-gauge" src="asset/game/scroe.png" alt="" width="436" height="436" draggable="false" />
+          <img id="score-needle" class="score-needle" src="asset/game/score_needle.png" alt="" width="365" height="365" draggable="false" />
+          <strong id="score-value" class="score-value" aria-label="점수 0">0</strong>
+          <!-- 점수 변화(+100 / -10 / +200 COMBO)가 점수 게이지 위로 떠올랐다 사라진다. -->
+          <strong id="score-float" class="score-float" aria-hidden="true"></strong>
+          <!-- 3연속 보너스 순간 Score 연출(2026-10-02, 단어미로(Star) 와 같게): 게이지 둘레 금빛 링과 그 위로 떠오르는 "보너스 +100". -->
+          <span id="score-bonus-ring" class="score-bonus-ring" aria-hidden="true"></span>
+          <strong id="score-bonus-float" class="score-bonus-float" aria-hidden="true"></strong>
+
+          <img class="time-gauge" src="asset/game/time.png" alt="" width="436" height="260" draggable="false" />
+          <img id="time-needle" class="time-needle" src="asset/game/time_needle.png" alt="" width="365" height="365" draggable="false" />
+          <strong id="time-value" class="time-value" aria-label="게임 준비 중">--:--</strong>
+          <!-- 연료통을 먹으면 시간 게이지 위로 "+10s" 가 떠올랐다 사라진다. -->
+          <strong id="time-float" class="time-float" aria-hidden="true"></strong>
+
+          <!-- 출발 카운트다운. 리소스 start_00~02(3·2·1)와 start(START)를 차례로 보여 준다. -->
+          <div id="countdown" class="countdown" aria-live="assertive" hidden>
+            <img id="countdown-image" class="countdown-image" src="asset/start/start_00.png" alt="3" width="750" height="346" draggable="false" />
+          </div>
+
+          <p id="game-status" class="sr-only" aria-live="assertive"></p>
+        </section>
+
+        <!-- 결과 화면. 구조와 좌표는 형제 방들과 같다(공용 에셋). -->
+        <section id="end-screen" class="end-screen" aria-label="게임 결과" aria-hidden="true">
+          <!--
+            공통 9항(사장님 지시 2026-09-29): 새로고침 대신 X 를 두고 누르면 시작 화면으로 간다.
+            id 는 스크립트가 쓰던 것을 그대로 둔다. btn_replay.png 파일은 남겨 두고 참조만 뺐다.
+          -->
+          <button
+            id="result-replay-button"
+            class="result-replay-button"
+            type="button"
+            aria-label="시작 화면으로"
+          >
+            <img src="asset/btn_close.png" alt="" width="66" height="69" draggable="false" />
+          </button>
+
+          <img class="result-background" src="asset/game/game_bg2.png" alt="" draggable="false" />
+          <img class="result-layout" src="asset/result/bg.png?v=20261015-2" alt="" draggable="false" />
+
+          <!--
+            등급별 여우(사장님 지시 2026-09-30). 이 방은 카드가 배경 그림 안에 그려져 있어
+            뒤에 두면 통째로 가려진다. 그래서 카드 위에 얹고, LF 시안 실측 자리에 238x270 을
+            통째로 놓는다. 자르지 않는다 — 발이 카드 윗변(y=338)에 닿을 뿐이다.
+            그림은 script.js 가 등급에 따라 바꾼다.
+          -->
+          <span class="result-fox" aria-hidden="true">
+            <img id="result-fox-image" class="result-fox-image" src="asset/result/good.png?v=20261015-2" alt="" width="238" height="270" draggable="false" />
+          </span>
+          <canvas
+            id="result-particle-canvas"
+            class="result-particle-canvas"
+            width="1920"
+            height="1080"
+            aria-hidden="true"
+          ></canvas>
+          <img
+            id="result-title"
+            class="result-title"
+            src="asset/result/result_text1.png"
+            alt="Good"
+            draggable="false"
+          />
+
+          <output id="result-correct-points" class="result-points result-points-correct" aria-label="정답 점수 0점">0</output>
+          <output id="result-incorrect-points" class="result-points result-points-incorrect" aria-label="오답 점수 0점">0</output>
+          <output id="result-bonus-points" class="result-points result-points-bonus" aria-label="보너스 점수 0점">0</output>
+
+          <div class="result-total" aria-label="내 점수">
+            <span id="result-rank" class="result-rank">-</span>
+            <img class="result-point-box" src="asset/result/result_point_box.png?v=20261015-2" alt="" draggable="false" />
+            <output id="result-total-score" class="result-total-score" aria-label="0점">
+              <span id="result-score-number" class="result-score-number">0</span>
+              <span class="result-score-unit">점</span>
+            </output>
+          </div>
+
+          <p id="result-message" class="result-message" role="status" aria-live="polite"></p>
+
+          <nav class="result-actions" aria-label="결과 화면 메뉴">
+            <button id="incorrect-answers-button" class="result-action" type="button" aria-label="오답 없음" disabled>
+              <img src="asset/result/btn1.png" alt="Incorrect Answers" draggable="false" />
+            </button>
+            <button id="ranking-button" class="result-action" type="button" disabled>
+              <img src="asset/result/btn3.png" alt="Ranking" draggable="false" />
+            </button>
+            <button id="try-again-button" class="result-action" type="button" aria-label="다시 하기">
+              <img src="asset/result/btn2.png" alt="Try Again" draggable="false" />
+            </button>
+          </nav>
+
+          <div id="incorrect-answer-dialog" class="incorrect-answer-dialog" hidden>
+            <button
+              id="incorrect-answer-backdrop"
+              class="incorrect-answer-backdrop"
+              type="button"
+              tabindex="-1"
+              aria-label="오답 목록 닫기"
+            ></button>
+
+            <section
+              class="incorrect-answer-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="incorrect-answer-dialog-title"
+            >
+              <h2 id="incorrect-answer-dialog-title" class="sr-only">Incorrect Answers</h2>
+              <img
+                class="incorrect-answer-background"
+                src="asset/incorrect-answer/bg_incorrect.png"
+                alt=""
+                width="1347"
+                height="980"
+                draggable="false"
+              />
+              <button
+                id="incorrect-answer-close-button"
+                class="incorrect-answer-close"
+                type="button"
+                aria-label="오답 목록 닫기"
+              >
+                <img
+                  src="asset/incorrect-answer/btn_close_popup.png"
+                  alt=""
+                  width="77"
+                  height="87"
+                  draggable="false"
+                />
+              </button>
+
+              <div class="incorrect-answer-table" role="table" aria-label="오답 목록">
+                <div class="incorrect-answer-header incorrect-answer-grid" role="row">
+                  <span role="columnheader"><span class="sr-only">발음</span></span>
+                  <span role="columnheader">단어</span>
+                  <span role="columnheader">뜻</span>
+                </div>
+                <div
+                  id="incorrect-answer-list"
+                  class="incorrect-answer-list"
+                  role="rowgroup"
+                  tabindex="0"
+                  aria-label="오답 단어 목록"
+                ></div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <div id="result-dialog" class="result-dialog" hidden>
+          <button id="result-dialog-backdrop" class="result-dialog-backdrop" type="button" tabindex="-1" aria-label="랭킹 닫기"></button>
+          <section class="result-dialog-card" role="dialog" aria-modal="true" aria-labelledby="result-dialog-title">
+            <header class="ranking-header">
+              <!-- 검수표 r8: 상단 게임명은 두지 않고 Ranking 제목만 가운데 놓는다. -->
+              <h2 id="result-dialog-title">Ranking</h2>
+              <button id="result-dialog-close" class="result-dialog-close" type="button" aria-label="랭킹 닫기">
+                <img src="asset/incorrect-answer/btn_close_popup.png" alt="" width="77" height="87" draggable="false" />
+              </button>
+            </header>
+
+            <section class="ranking-my-best" aria-label="내 최고 점수">
+              <span class="ranking-my-badge" aria-hidden="true">
+                <img id="ranking-my-badge-image" alt="" hidden />
+                <span id="ranking-my-badge-fallback">O</span>
+              </span>
+              <span class="ranking-my-label">My Best</span>
+              <strong id="ranking-my-name" class="ranking-my-name">회원</strong>
+              <strong id="ranking-my-score" class="ranking-my-score">0</strong>
+            </section>
+
+            <div class="ranking-table" role="table" aria-label="랭킹">
+              <div class="ranking-table-header ranking-grid" role="row">
+                <span role="columnheader">순위</span>
+                <span role="columnheader" aria-label="배지"></span>
+                <span role="columnheader">닉네임</span>
+                <span role="columnheader">최고 점수</span>
+              </div>
+              <div
+                id="result-dialog-content"
+                class="result-dialog-content"
+                role="rowgroup"
+                tabindex="0"
+                aria-label="랭킹 목록"
+              ></div>
+            </div>
+          </section>
+        </div>
+
+        <section id="loading-screen" class="loading-screen" aria-live="polite">
+          <div class="loading-card">
+            <span class="loading-spinner" aria-hidden="true"></span>
+            <h2 id="loading-title">게임 준비 중</h2>
+            <p id="loading-message">단어와 게임 정보를 불러오고 있습니다.</p>
+            <button id="retry-button" class="retry-button" type="button" hidden>다시 시도</button>
+          </div>
+        </section>
+      </section>
+
+      <!-- 2차 검수 공통-14(사장님 2026-10-12 "가로 방향으로 돌려달라고 하는 부분 빼자"): 세로 화면 안내를 뺐다. 세로에서도 무대가 폭에 맞춰 그대로 보이고 눌린다. -->
+      <noscript>이 게임을 실행하려면 브라우저에서 JavaScript를 허용해 주세요.</noscript>
+    </main>
+
+    <script id="gameConfig" type="application/json">
+      {
+        "schemaVersion": 2,
+        "deployment": {
+          "apiUserAgent": "LITTLEFOX_VOCA_WEB:desktop/1.0.0/browser/Web:unknown"
+        },
+        "scoring": {
+          "correct": 100,
+          "incorrect": -10,
+          "obstacle": -10,
+          "comboEvery": 3,
+          "comboBonus": 100
+        },
+        "timing": {
+          "countdownStepMs": 700,
+          "fuelBonusSeconds": 10
+        },
+        "gauge": {
+          "scoreMax": 2000
+        },
+        "demo": {
+          "info": {},
+          "words": [
+            { "text": "apple", "mean": "사과" },
+            { "text": "pear", "mean": "배" },
+            { "text": "grape", "mean": "포도" },
+            { "text": "west", "mean": "서쪽" },
+            { "text": "forest", "mean": "숲" },
+            { "text": "bright", "mean": "밝은" },
+            { "text": "quick", "mean": "빠른" },
+            { "text": "smile", "mean": "미소 짓다" },
+            { "text": "river", "mean": "강" },
+            { "text": "heavy", "mean": "무거운" },
+            { "text": "window", "mean": "창문" },
+            { "text": "early", "mean": "이른" },
+            { "text": "garden", "mean": "정원" },
+            { "text": "island", "mean": "섬" },
+            { "text": "ocean", "mean": "바다, 대양" },
+            { "text": "planet", "mean": "행성" },
+            { "text": "rocket", "mean": "로켓" },
+            { "text": "journey", "mean": "여행" },
+            { "text": "powerful", "mean": "강력한" },
+            { "text": "found", "mean": "발견했다\n찾았다" }
+          ]
+        }
+      }
+    </script>
+    <script src="rules.js?v=20261015-2"></script>
+    <script src="race.js?v=20261015-2"></script>
+    <script src="api-client.js?v=20261015-2"></script>
+    <script src="content-loader.js?v=20261015-2"></script>
+    <script src="script.js?v=20261015-2"></script>
+  </body>
+</html>

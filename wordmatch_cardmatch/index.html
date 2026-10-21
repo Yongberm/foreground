@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="theme-color" content="#1f8fd6" />
+    <meta name="description" content="한글 단어 카드와 영어 단어 카드의 짝을 찾아 없애는 Word Match 카드 짝 맞추기" />
+    <title>Word Match - 카드 짝 맞추기</title>
+    <link rel="icon" href="assets/game/card_gr.png" />
+    <!-- 한글 글꼴(나눔스퀘어라운드 ExtraBold)을 CSS 보다 먼저 받기 시작한다 — 첫 화면에 시스템 한글 글꼴이 번쩍 보이지 않게. -->
+    <link rel="preload" href="assets/font/NanumFontSetup_OTF_SQUARE_ROUND/NanumSquareRoundOTFEB.otf" as="font" type="font/otf" crossorigin />
+    <link rel="stylesheet" href="styles.css?v=20261015-3" />
+  </head>
+  <body>
+    <main class="viewport">
+      <h1 class="sr-only">Word Match Card Match</h1>
+      <section id="game-stage" class="game-stage" aria-label="한글 단어 카드와 영어 단어 카드의 짝을 찾아 없애는 게임">
+        <p id="status-toast" class="status-toast" role="status" aria-live="polite"></p>
+
+        <button
+          id="sound-button"
+          class="global-control sound-button"
+          type="button"
+          aria-label="소리 끄기"
+          aria-pressed="true"
+          hidden
+        >
+          <img id="sound-icon" src="assets/btn_sound_on.png" alt="" width="66" height="69" draggable="false" />
+        </button>
+
+        <button
+          id="navigation-button"
+          class="global-control navigation-button"
+          type="button"
+          aria-label="게임 닫기"
+          hidden
+        >
+          <img id="navigation-icon" src="assets/btn_close.png" alt="" width="66" height="69" draggable="false" />
+        </button>
+
+        <!-- 시작 화면. 좌표는 docs/preview_start.png 실측값이다. -->
+        <section id="start-screen" class="screen start-screen" aria-label="시작 화면" hidden>
+          <img class="start-background" src="assets/start/start_bg.png" alt="" width="1920" height="1080" draggable="false" />
+          <!-- 여우는 로고 뒤에서 튜브를 타고 있다(back_cha). 그래서 마크업에서 로고보다 먼저 온다. -->
+          <img
+            class="start-character"
+            src="assets/start/back_cha.png"
+            alt=""
+            width="373"
+            height="409"
+            draggable="false"
+          />
+          <img
+            class="start-logo"
+            src="assets/start/logo_front.png"
+            alt="Word Match"
+            width="792"
+            height="469"
+            draggable="false"
+          />
+
+          <!-- 2차 검수 공통-9: 동화 정보(API info 의 title · subtitle). 로고와 Start 버튼 사이에 둔다. 값이 없으면 숨는다. -->
+          <div id="start-story" class="start-story" role="group" aria-label="동화 정보" hidden>
+            <p id="start-story-title" class="start-story-title"></p>
+            <p id="start-story-subtitle" class="start-story-subtitle"></p>
+          </div>
+
+          <nav class="start-menu" aria-label="시작 메뉴">
+            <button id="start-button" class="start-menu-button start-menu-button-play" type="button" aria-busy="true" disabled>
+              <span>Start</span>
+            </button>
+            <button id="start-ranking-button" class="start-menu-button start-menu-button-ranking" type="button" disabled>
+              <span>Ranking</span>
+            </button>
+          </nav>
+
+          <button id="help-button" class="start-help-button" type="button" aria-label="도움말" disabled>
+            <img src="assets/btn_help.png" alt="" width="62" height="63" draggable="false" />
+          </button>
+        </section>
+
+        <!-- 도움말. 형제 방과 같이 팝업이 아니라 전용 배경의 전체 화면이다. -->
+        <section
+          id="help-screen"
+          class="screen help-screen"
+          role="dialog"
+          aria-labelledby="help-screen-title"
+          hidden
+        >
+          <img class="help-background" src="assets/guide/help_bg.png" alt="" width="1920" height="1080" draggable="false" />
+          <h2 id="help-screen-title" class="sr-only">도움말</h2>
+          <div class="help-content-viewport" tabindex="0">
+            <div id="help-content" class="help-content"></div>
+            <div id="help-status" class="help-status" role="status" aria-live="polite">
+              <span id="help-status-message">도움말을 불러오는 중입니다.</span>
+              <button id="help-retry-button" class="help-retry-button" type="button" hidden>Retry</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 게임 화면. 카드는 script.js 가 판마다 4x3 격자에 맞춰 만들어 넣는다. -->
+        <section id="play-screen" class="screen play-screen" aria-label="카드 짝 맞추기" hidden>
+          <img class="play-background" src="assets/game/game_bg.png" alt="" width="1920" height="1080" draggable="false" />
+
+          <div
+            id="card-grid"
+            class="card-grid"
+            role="group"
+            aria-label="카드 판. 한글 단어 카드와 같은 뜻의 영어 단어 카드를 하나씩 눌러 짝을 맞추세요."
+          ></div>
+
+          <img class="hud" src="assets/game/ui_bar.png?v=20261013-1" alt="" width="1920" height="199" draggable="false" />
+          <!-- 2차 검수 공통-5: 새 아래 막대(ui_bar.png, 2026-10-08 교체)에는 Score 상자가 없다. 상자는 따로 그리고 점수 숫자를 그 위에 올린다. -->
+          <img class="score-box" src="assets/game/box_score.png?v=20261013-1" alt="" width="1881" height="836" draggable="false" />
+          <strong id="score-value" class="score-value" aria-label="점수 0">0</strong>
+          <!-- 검수표 r11 후속(사용자 지시 2026-09-15): 점수 변화는 Score 상자에서 보인다. 형제 바다속 방과 같은 구성 —
+               정답 +100·오답 -10(#score-delta), 보너스는 상자 테두리·반짝임(#score-burst).
+               2차 수정(PDF 4쪽, 공통 기준): 보너스 점수는 Score 상자 위가 아니라 보너스 칸 위에 뜬다(#bonus-gain · .bonus-step-gain).
+               읽어 주는 문구는 #game-status 가 맡으므로 모두 aria-hidden. -->
+          <span id="score-burst" class="score-burst" aria-hidden="true"></span>
+          <p id="score-delta" class="score-delta" aria-hidden="true"></p>
+
+          <img class="timer-track" src="assets/game/ui_timer3.png" alt="" width="713" height="55" draggable="false" />
+          <img id="timer-fill" class="timer-fill" src="assets/game/ui_timer2.png" alt="" width="750" height="99" draggable="false" />
+          <img class="timer-clock" src="assets/game/ui_timer1.png" alt="" width="132" height="111" draggable="false" />
+          <strong id="time-value" class="time-value" aria-label="게임 준비 중">--:--</strong>
+          <!-- 2차 수정: 남은 10초부터 타임바를 고르게 빨갛게 바꾸는 색 필터(바다속과 같은 행렬). 밝기는 살리고 색만 빨강으로 모은다. -->
+          <svg class="svg-defs" width="0" height="0" aria-hidden="true" focusable="false">
+            <filter id="timer-fill-red" color-interpolation-filters="sRGB">
+              <feColorMatrix type="matrix" values="0.24 0.48 0.09 0 0.30  0.03 0.06 0.01 0 0.03  0.04 0.08 0.015 0 0.05  0 0 0 1 0" />
+            </filter>
+          </svg>
+
+          <!-- 2차 수정(PDF 4쪽 "보너스 UI 상단에 100점 노출", 공통 기준): 셋째 칸(보너스 공)에 BONUS 띠와 보너스 점수. -->
+          <strong id="bonus-gain" class="bonus-gain" aria-hidden="true" hidden>
+            <span class="bonus-gain-label">BONUS</span>
+            <span class="bonus-gain-value">+100</span>
+          </strong>
+
+          <div id="bonus-meter" class="bonus-meter" aria-label="연속 정답 0단계">
+            <span class="bonus-slot bonus-one" data-combo-step="1" aria-hidden="true">
+              <img class="bonus-image" src="assets/game/combo_1.png" alt="" width="100" height="100" draggable="false" />
+              <span class="bonus-sparks"></span>
+              <strong class="bonus-step-gain" hidden>+100</strong>
+            </span>
+            <span class="bonus-slot bonus-two" data-combo-step="2" aria-hidden="true">
+              <img class="bonus-image" src="assets/game/combo_2.png" alt="" width="100" height="100" draggable="false" />
+              <span class="bonus-sparks"></span>
+              <strong class="bonus-step-gain" hidden>+100</strong>
+            </span>
+            <span class="bonus-slot bonus-three" data-combo-step="3" aria-hidden="true">
+              <img class="bonus-image" src="assets/game/combo_bonus.png" alt="" width="173" height="183" draggable="false" />
+              <span class="bonus-sparks"></span>
+            </span>
+          </div>
+
+          <p id="game-status" class="sr-only" aria-live="assertive"></p>
+        </section>
+
+        <!-- 결과 화면. 구조와 좌표는 형제 방들과 같다(공용 에셋). -->
+        <section id="end-screen" class="end-screen" aria-label="게임 결과" aria-hidden="true">
+          <!-- 공통 9-2(사장님 지시 2026-09-29): 새로고침 버튼을 X 버튼으로. 누르면 점수 저장이 끝난 뒤 시작 화면으로 간다.
+               2차 검수 공통-2 · 공통-3(사장님 2026-10-12): 자리는 오른쪽 상단이다(CSS .result-home-button). -->
+          <button
+            id="result-home-button"
+            class="result-home-button"
+            type="button"
+            aria-label="시작 화면으로"
+          >
+            <img src="assets/btn_close.png" alt="" draggable="false" />
+          </button>
+
+          <img class="result-background" src="assets/game/game_bg.png" alt="" draggable="false" />
+          <img class="result-layout" src="assets/result/bg.png?v=20261013-1" alt="" draggable="false" />
+          <!-- 등급별 여우(2026-09-30). 시안 실측: 상자 left 1319 · top 68 이라 아래끝 338 이 카드 상단선과
+               만나 가리지 않는다. 카드 그림 다음 순서라 카드 위에 얹힌다. src 는 제목 그림과 같은 자리에서 정한다. -->
+          <img
+            id="result-character"
+            class="result-character"
+            src="assets/result/try_again.png?v=20260930-1"
+            alt=""
+            width="238"
+            height="270"
+            draggable="false"
+            hidden
+          />
+          <canvas
+            id="result-particle-canvas"
+            class="result-particle-canvas"
+            width="1920"
+            height="1080"
+            aria-hidden="true"
+          ></canvas>
+          <img
+            id="result-title"
+            class="result-title"
+            src="assets/result/result_text1.png"
+            alt="Good"
+            draggable="false"
+          />
+
+          <!-- 2차 검수 공통-2: 숫자 뒤의 "개" 와 Bonus 앞의 "+" 는 쓰지 않는다. Bonus 의 "점" 은 CSS(.result-points::after)가 붙인다. -->
+          <output id="result-correct-points" class="result-points result-points-correct" aria-label="정답 0개">0</output>
+          <output id="result-incorrect-points" class="result-points result-points-incorrect" aria-label="오답 0개">0</output>
+          <output id="result-bonus-points" class="result-points result-points-bonus" aria-label="보너스 0점">0</output>
+
+          <div class="result-total" aria-label="내 점수">
+            <span id="result-rank" class="result-rank">-</span>
+            <img class="result-point-box" src="assets/result/result_point_box.png?v=20260930-2" alt="" draggable="false" />
+            <output id="result-total-score" class="result-total-score" aria-label="0점">
+              <span id="result-score-number" class="result-score-number">0</span>
+              <span class="result-score-unit">점</span>
+            </output>
+          </div>
+
+          <p id="result-message" class="result-message" role="status" aria-live="polite"></p>
+
+          <nav class="result-actions" aria-label="결과 화면 메뉴">
+            <button id="incorrect-answers-button" class="result-action" type="button" aria-label="오답 없음" disabled>
+              <img src="assets/result/btn1.png" alt="Incorrect Answers" draggable="false" />
+            </button>
+            <button id="ranking-button" class="result-action" type="button" disabled>
+              <img src="assets/result/btn3.png" alt="Ranking" draggable="false" />
+            </button>
+            <button id="try-again-button" class="result-action" type="button" aria-label="다시 하기">
+              <img src="assets/result/btn2.png" alt="Try Again" draggable="false" />
+            </button>
+          </nav>
+
+          <div id="incorrect-answer-dialog" class="incorrect-answer-dialog" hidden>
+            <button
+              id="incorrect-answer-backdrop"
+              class="incorrect-answer-backdrop"
+              type="button"
+              tabindex="-1"
+              aria-label="오답 목록 닫기"
+            ></button>
+
+            <section
+              class="incorrect-answer-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="incorrect-answer-dialog-title"
+            >
+              <h2 id="incorrect-answer-dialog-title" class="sr-only">Incorrect Answers</h2>
+              <img
+                class="incorrect-answer-background"
+                src="assets/incorrect-answer/bg_incorrect.png"
+                alt=""
+                width="1347"
+                height="980"
+                draggable="false"
+              />
+              <button
+                id="incorrect-answer-close-button"
+                class="incorrect-answer-close"
+                type="button"
+                aria-label="오답 목록 닫기"
+              >
+                <img
+                  src="assets/incorrect-answer/btn_close_popup.png"
+                  alt=""
+                  width="77"
+                  height="87"
+                  draggable="false"
+                />
+              </button>
+
+              <div class="incorrect-answer-table" role="table" aria-label="오답 목록">
+                <div class="incorrect-answer-header incorrect-answer-grid" role="row">
+                  <span role="columnheader"><span class="sr-only">발음</span></span>
+                  <span role="columnheader">단어</span>
+                  <span role="columnheader">뜻</span>
+                </div>
+                <div
+                  id="incorrect-answer-list"
+                  class="incorrect-answer-list"
+                  role="rowgroup"
+                  tabindex="0"
+                  aria-label="오답 단어 목록"
+                ></div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <div id="result-dialog" class="result-dialog" hidden>
+          <button id="result-dialog-backdrop" class="result-dialog-backdrop" type="button" tabindex="-1" aria-label="랭킹 닫기"></button>
+          <section class="result-dialog-card" role="dialog" aria-modal="true" aria-labelledby="result-dialog-title">
+            <!-- 검수표 r8: 상단 게임명 텍스트를 없애고 Ranking 타이틀만 세로 가운데 정렬한다. -->
+            <header class="ranking-header">
+              <h2 id="result-dialog-title">Ranking</h2>
+              <button id="result-dialog-close" class="result-dialog-close" type="button" aria-label="랭킹 닫기">
+                <img src="assets/incorrect-answer/btn_close_popup.png" alt="" width="77" height="87" draggable="false" />
+              </button>
+            </header>
+
+            <section class="ranking-my-best" aria-label="내 최고 점수">
+              <span class="ranking-my-badge" aria-hidden="true">
+                <img id="ranking-my-badge-image" alt="" hidden />
+                <span id="ranking-my-badge-fallback">O</span>
+              </span>
+              <span class="ranking-my-label">My Best</span>
+              <strong id="ranking-my-name" class="ranking-my-name">회원</strong>
+              <strong id="ranking-my-score" class="ranking-my-score">0</strong>
+            </section>
+
+            <div class="ranking-table" role="table" aria-label="랭킹">
+              <div class="ranking-table-header ranking-grid" role="row">
+                <span role="columnheader">순위</span>
+                <span role="columnheader" aria-label="배지"></span>
+                <span role="columnheader">닉네임</span>
+                <span role="columnheader">최고 점수</span>
+              </div>
+              <div
+                id="result-dialog-content"
+                class="result-dialog-content"
+                role="rowgroup"
+                tabindex="0"
+                aria-label="랭킹 목록"
+              ></div>
+            </div>
+          </section>
+        </div>
+
+        <section id="loading-screen" class="loading-screen" aria-live="polite">
+          <div class="loading-card">
+            <span class="loading-spinner" aria-hidden="true"></span>
+            <h2 id="loading-title">게임 준비 중</h2>
+            <p id="loading-message">단어와 게임 정보를 불러오고 있습니다.</p>
+            <button id="retry-button" class="retry-button" type="button" hidden>다시 시도</button>
+          </div>
+        </section>
+      </section>
+
+      <noscript>이 게임을 실행하려면 브라우저에서 JavaScript를 허용해 주세요.</noscript>
+    </main>
+
+    <script id="gameConfig" type="application/json">
+      {
+        "schemaVersion": 2,
+        "deployment": {
+          "apiUserAgent": "LITTLEFOX_VOCA_WEB:desktop/1.0.0/browser/Web:unknown"
+        },
+        "scoring": {
+          "correct": 100,
+          "incorrect": -10,
+          "comboEvery": 3,
+          "comboBonus": 100
+        },
+        "demo": {
+          "info": { "play_time": 120 },
+          "words": [
+            { "text": "powerful", "mean": "강력한\n영향력 있는" },
+            { "text": "west", "mean": "서쪽" },
+            { "text": "journey", "mean": "여행\n(보통, 육로의 장거리 여행)" },
+            { "text": "split", "mean": "쪼개지다\n갈라지다" },
+            { "text": "found", "mean": "발견했다\n찾았다" },
+            { "text": "forest", "mean": "숲" },
+            { "text": "bright", "mean": "밝은" },
+            { "text": "quick", "mean": "빠른" },
+            { "text": "smile", "mean": "미소 짓다" },
+            { "text": "river", "mean": "강" },
+            { "text": "heavy", "mean": "무거운" },
+            { "text": "window", "mean": "창문" },
+            { "text": "early", "mean": "이른" },
+            { "text": "garden", "mean": "정원" },
+            { "text": "island", "mean": "섬" },
+            { "text": "ocean", "mean": "바다, 대양" },
+            { "text": "planet", "mean": "행성" },
+            { "text": "rocket", "mean": "로켓" },
+            { "text": "knighthood", "mean": "기사 신분" },
+            { "text": "extraordinary", "mean": "대단히 비범하고 놀라운" }
+          ]
+        }
+      }
+    </script>
+    <script src="cards.js?v=20261001-1"></script>
+    <script src="rules.js?v=20260930-2"></script>
+    <script src="api-client.js?v=20260930-2"></script>
+    <script src="content-loader.js?v=20261013-1"></script>
+    <script src="script.js?v=20261015-4"></script>
+  </body>
+</html>

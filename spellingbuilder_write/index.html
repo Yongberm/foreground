@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="ko">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#7cc043" />
+  <meta name="description" content="제시된 영어 단어의 철자를 손으로 따라 칠하며 완성하는 Spelling Builder 따라쓰기 게임" />
+  <title>Spelling Builder - 따라쓰기</title>
+  <link rel="icon" href="assets/game/alphabat_text_box.png" />
+  <link rel="stylesheet" href="styles.css?v=20261015-01" />
+</head>
+
+<body>
+  <main class="viewport">
+    <h1 class="sr-only">Spelling Builder 따라쓰기</h1>
+    <section id="game-stage" class="game-stage" aria-label="철자를 따라 칠하며 단어를 완성하는 게임">
+      <img class="background" src="assets/game/game_bg.png?v=20261015-01" alt="" draggable="false" />
+
+      <p id="status-toast" class="status-toast" role="status" aria-live="polite"></p>
+
+      <button id="sound-button" class="global-control sound-button" type="button" aria-label="소리 끄기" aria-pressed="true"
+        hidden>
+        <img id="sound-icon" src="assets/btn_sound_on.png?v=20261015-01" alt="" width="66" height="69"
+          draggable="false" />
+      </button>
+
+      <button id="navigation-button" class="global-control navigation-button" type="button" aria-label="게임 닫기" hidden>
+        <img id="navigation-icon" src="assets/btn_close.png?v=20261015-01" alt="" width="66" height="69"
+          draggable="false" />
+      </button>
+
+      <!-- 오프닝(공통) -->
+      <section id="start-screen" class="screen start-screen" aria-label="시작 화면" hidden>
+        <img class="start-background" src="assets/start/intro_bg.png?v=20261015-01" alt="" width="1920" height="1080"
+          draggable="false" />
+        <img class="start-logo-item start-logo-item-1" src="assets/start/logo_item_1.png?v=20261015-01" alt=""
+          draggable="false" />
+        <img class="start-logo-item start-logo-item-2" src="assets/start/logo_item_2.png?v=20261015-01" alt=""
+          draggable="false" />
+        <img class="start-logo" src="assets/start/logo.png?v=20261015-01" alt="Spelling Builder" width="1321"
+          height="440" draggable="false" />
+
+        <!-- 동화 정보(2차 공통-9): 로고와 Start 사이. 글자는 게임 코드가 info 응답에서 채운다. -->
+        <div id="start-story" class="start-story" role="group" aria-label="동화 정보" hidden>
+          <p id="start-story-title" class="start-story-title"></p>
+          <p id="start-story-subtitle" class="start-story-subtitle"></p>
+        </div>
+
+        <nav class="start-menu" aria-label="시작 메뉴">
+          <button id="start-button" class="start-menu-button start-menu-button-play" type="button" aria-busy="true"
+            disabled>
+            <span>Start</span>
+          </button>
+        </nav>
+
+        <button id="help-button" class="start-help-button" type="button" aria-label="도움말" disabled>
+          <img src="assets/btn_help.png?v=20261015-01" alt="" width="62" height="63" draggable="false" />
+        </button>
+      </section>
+
+      <!-- 도움말(공통) -->
+      <section id="help-screen" class="screen help-screen" role="dialog" aria-labelledby="help-screen-title" hidden>
+        <img class="help-background" src="assets/start/intro_bg.png?v=20261015-01" alt="" width="1920" height="1080"
+          draggable="false" />
+        <h2 id="help-screen-title" class="sr-only">도움말</h2>
+        <div class="help-content-viewport" tabindex="0">
+          <div id="help-content" class="help-content"></div>
+          <div id="help-status" class="help-status" role="status" aria-live="polite">
+            <span id="help-status-message">도움말을 불러오는 중입니다.</span>
+            <button id="help-retry-button" class="help-retry-button" type="button" hidden>Retry</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 게임(따라쓰기) -->
+      <section id="play-screen" class="screen play-screen" aria-label="철자 따라쓰기" hidden>
+        <div class="meaning-panel">
+          <img class="meaning-box" src="assets/game/top_panner_box.png?v=20261015-01" alt="" width="600" height="148"
+            draggable="false" />
+          <p id="word-meaning" class="meaning-text" aria-live="polite">
+            <span id="word-meaning-text" class="meaning-text-inner"></span>
+          </p>
+        </div>
+
+        <div id="trace-tile" class="trace-tile">
+          <img class="trace-fox trace-fox-left" src="assets/game/draw_back_char_left.png?v=20261015-01" alt=""
+            width="377" height="371" draggable="false" />
+          <img class="trace-fox trace-fox-right" src="assets/game/draw_back_char_right.png?v=20261015-01" alt=""
+            width="385" height="385" draggable="false" />
+          <img class="trace-tile-bg" src="assets/game/draw_panner.png?v=20261015-01" alt="" width="495" height="504"
+            draggable="false" />
+          <canvas id="trace-canvas" class="trace-canvas" width="560" height="560" aria-label="현재 글자를 따라 칠하세요"></canvas>
+          <!-- 기획서 1-3: 획순은 디자인 표기 전용(판정과 무관).
+                 로고와 같은 점선으로 진행 경로를, 번호와 시작점으로 순서를 안내한다. -->
+          <svg id="stroke-order" class="stroke-order" viewBox="0 0 560 560" aria-hidden="true">
+            <g id="stroke-order-paths"></g>
+          </svg>
+        </div>
+
+
+        <!-- 정답 출력: 형제(spellingbuilde_start)와 같이 화면 전체를 덮고 단어만 크게 보여 준다.
+               확인 버튼 없이 사운드를 들려준 뒤 스스로 다음 문제로 넘어간다. -->
+        <div id="answer-reveal" class="answer-reveal" role="status" aria-live="assertive" hidden>
+          <p id="word-reveal" class="answer-reveal-word"></p>
+        </div>
+
+        <div id="letter-row" class="letter-row" role="group" aria-label="단어 철자"></div>
+
+
+        <!-- 하단 진행 표시: start_panner_box 상자 안에 별(start_basic/start_active).
+               분홍 메모 "상시로 볼 수 있게 문항 수 표기"는 별이 대신한다 —
+               숫자 표기는 뺐다. 진행 상황은 aria-label 로 읽어 준다. -->
+        <div class="progress-panel">
+          <img class="progress-box" src="assets/game/start_panner_box.png?v=20261015-01" alt="" width="333" height="101"
+            draggable="false" />
+          <div id="game-progress" class="game-progress" role="img" aria-label="문항 진행 0 / 5"></div>
+        </div>
+
+        <p id="game-status" class="sr-only" aria-live="assertive"></p>
+      </section>
+
+      <!-- 엔딩(공통 구조). 이 모델은 점수 대신 완성한 단어 수를 넣는다. -->
+      <section id="end-screen" class="end-screen" aria-label="게임 결과" aria-hidden="true">
+        <button id="result-close-button" class="result-close-button" type="button" aria-label="시작 화면으로">
+          <img src="assets/btn_close.png?v=20261015-01" alt="" width="66" height="69" draggable="false" />
+        </button>
+
+        <img class="result-background" src="assets/game/game_bg.png?v=20261015-01" alt="" width="1920" height="1080"
+          draggable="false" />
+        <img class="result-layout" src="assets/result/bg.png?v=20261015-01" alt="" width="1920" height="1080"
+          draggable="false" />
+        <canvas id="result-particle-canvas" class="result-particle-canvas" width="1920" height="1080"
+          aria-hidden="true"></canvas>
+        <!-- 등급별 여우(사장님 지시 2026-09-30). 카드보다 먼저 두고 z-index 를 낮춰
+             카드 뒤로 아래쪽이 가리게 한다. src 는 등급에 맞춰 게임 코드가 바꾼다. -->
+        <img id="result-fox" class="result-fox" src="assets/result/good.png?v=20261015-01" alt=""
+          width="238" height="270" draggable="false" hidden />
+
+        <img id="result-title" class="result-title" src="assets/result/result_text1.png?v=20261015-01" alt="Good"
+          draggable="false" />
+
+        <output id="result-correct-points" class="result-points result-points-correct" aria-label="완성 0개">0</output>
+        <output id="result-incorrect-points" class="result-points result-points-incorrect"
+          aria-label="미완성 해당 없음">-</output>
+        <output id="result-bonus-points" class="result-points result-points-bonus" aria-label="보너스 미적용">-</output>
+
+        <!-- 2차 SB공통-2 · SB1-1: 트로피 없이 개수만 칸 가운데. 알약 바탕은 CSS 가 그린다. -->
+        <div class="result-total" aria-label="완성한 단어 수">
+          <output id="result-total-score" class="result-total-score" aria-label="완성한 단어 0개">
+            <span id="result-score-number" class="result-score-number">0</span>
+            <span class="result-score-unit">/ 5</span>
+          </output>
+        </div>
+
+        <p id="result-message" class="result-message" role="status" aria-live="polite"></p>
+
+        <nav class="result-actions" aria-label="결과 화면 메뉴">
+          <button id="try-again-button" class="result-action" type="button" aria-label="다시 하기">
+            <img src="assets/result/btn2.png?v=20261015-01" alt="Try Again" draggable="false" />
+          </button>
+        </nav>
+
+        <div id="incorrect-answer-dialog" class="incorrect-answer-dialog" hidden>
+          <button id="incorrect-answer-backdrop" class="incorrect-answer-backdrop" type="button" tabindex="-1"
+            aria-label="미완성 목록 닫기"></button>
+
+          <section class="incorrect-answer-modal" role="dialog" aria-modal="true"
+            aria-labelledby="incorrect-answer-dialog-title">
+            <h2 id="incorrect-answer-dialog-title" class="sr-only">Incorrect Answers</h2>
+            <img class="incorrect-answer-background" src="assets/incorrect-answer/bg_incorrect.png?v=20261015-01" alt=""
+              width="1347" height="980" draggable="false" />
+            <button id="incorrect-answer-close-button" class="incorrect-answer-close" type="button"
+              aria-label="미완성 목록 닫기">
+              <img src="assets/incorrect-answer/btn_close_popup.png?v=20261015-01" alt="" width="77" height="87"
+                draggable="false" />
+            </button>
+
+            <div class="incorrect-answer-table" role="table" aria-label="미완성 단어 목록">
+              <div class="incorrect-answer-header incorrect-answer-grid" role="row">
+                <span role="columnheader"><span class="sr-only">발음</span></span>
+                <span role="columnheader">단어</span>
+                <span role="columnheader">뜻</span>
+              </div>
+              <div id="incorrect-answer-list" class="incorrect-answer-list" role="rowgroup" tabindex="0"
+                aria-label="미완성 단어 목록"></div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <!-- 로딩 -->
+      <section id="loading-screen" class="loading-screen" aria-live="polite">
+        <div class="loading-card">
+          <span class="loading-spinner" aria-hidden="true"></span>
+          <h2 id="loading-title">게임 준비 중</h2>
+          <p id="loading-message">단어와 게임 정보를 불러오고 있습니다.</p>
+          <button id="retry-button" class="retry-button" type="button" hidden>다시 시도</button>
+        </div>
+      </section>
+    </section>
+
+    <noscript>이 게임을 실행하려면 브라우저에서 JavaScript를 허용해 주세요.</noscript>
+  </main>
+
+  <script id="gameConfig" type="application/json">
+      {
+        "schemaVersion": 2,
+        "deployment": {
+          "apiUserAgent": "LITTLEFOX_VOCA_WEB:desktop/1.0.0/browser/Web:unknown"
+        },
+        "trace": {
+          "questionCount": 5,
+          "letterAdvanceRatio": 0.95,
+          "wordCorrectRatio": 0.9
+        },
+        "words": [
+          { "text": "apple",  "mean": "사과" },
+          { "text": "pear",   "mean": "배" },
+          { "text": "squid",  "mean": "오징어" },
+          { "text": "star",   "mean": "별" },
+          { "text": "frog",   "mean": "개구리" },
+          { "text": "fox",    "mean": "여우" },
+          { "text": "duck",   "mean": "오리" },
+          { "text": "lemon",  "mean": "레몬" }
+        ]
+      }
+    </script>
+  <script src="api-client.js?v=20261015-01"></script>
+  <script src="content-loader.js?v=20261015-01"></script>
+  <script src="trace-assets.js?v=20261015-01"></script>
+  <script src="stroke-guide.js?v=20261015-01"></script>
+  <script src="script.js?v=20261015-01"></script>
+</body>
+
+</html>

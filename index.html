@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>학습게임 12종 — 검수용 모음</title>
+<style>
+  :root {
+    --bg: #f4f1ea;
+    --card: #ffffff;
+    --ink: #4a3d2c;
+    --ink-soft: #7d6f5c;
+    --line: #e3d4c8;
+    --member: #5a6ad8;
+    --guest: #b08968;
+    --pick: #f0ebe2;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px 16px 64px;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  }
+  header, .panel, ul.games, footer { max-width: 1120px; margin-left: auto; margin-right: auto; }
+  h1 { font-size: 26px; margin: 0 0 6px; }
+  .sub { color: var(--ink-soft); font-size: 14px; margin: 0 0 20px; }
+
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 20px;
+  }
+  .row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+  .row:last-of-type { margin-bottom: 0; }
+  .row > .label { font-size: 13px; color: var(--ink-soft); flex: 0 0 96px; }
+
+  .levels { display: flex; flex-wrap: wrap; gap: 6px; }
+  .levels button {
+    font: inherit; font-size: 14px; font-weight: 700;
+    padding: 6px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--pick);
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .levels button[aria-pressed="true"] {
+    background: var(--member);
+    border-color: var(--member);
+    color: #fff;
+  }
+  select, input[type="text"] {
+    font: inherit; font-size: 14px;
+    padding: 7px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fffdf9;
+    color: var(--ink);
+    max-width: 100%;
+  }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .now {
+    margin: 14px 0 0; padding: 10px 12px;
+    background: #f7f4ee; border: 1px solid var(--line); border-radius: 8px;
+    font-size: 13px; color: var(--ink-soft);
+    overflow-wrap: anywhere;
+  }
+  .warn {
+    margin: 14px 0 0; padding: 10px 12px;
+    background: #fff6e8; border: 1px solid #f0d9b5; border-radius: 8px;
+    font-size: 13px; color: #7a5a2b;
+  }
+  code { background: #f0ebe2; padding: 1px 5px; border-radius: 4px; }
+
+  /* 2차 수정 안내 — 검수하시는 분이 "이상하다"고 볼 만한 것과 그 이유 */
+  details.notes {
+    max-width: 1120px; margin: 16px auto 0;
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 4px 18px; font-size: 13px; color: var(--ink);
+  }
+  details.notes > summary {
+    cursor: pointer; padding: 12px 0; font-size: 15px; font-weight: 700;
+  }
+  details.notes > summary span { font-weight: 400; font-size: 13px; color: var(--ink-soft); margin-left: 8px; }
+  details.notes h3 { font-size: 14px; margin: 14px 0 6px; }
+  details.notes p.lead { margin: 0 0 6px; color: var(--ink-soft); }
+  details.notes table { width: 100%; border-collapse: collapse; margin: 0 0 6px; }
+  details.notes th, details.notes td {
+    text-align: left; vertical-align: top; padding: 7px 8px;
+    border-top: 1px solid var(--line); line-height: 1.5;
+  }
+  details.notes th { background: #f7f4ee; font-weight: 600; white-space: nowrap; }
+  details.notes td.fix { white-space: nowrap; color: var(--ink-soft); }
+  details.notes td.what { width: 22%; }
+  details.notes ul { margin: 0 0 12px; padding-left: 18px; line-height: 1.6; }
+  @media (max-width: 720px) {
+    details.notes td.fix { white-space: normal; }
+    details.notes td.what { width: auto; }
+    details.notes th { white-space: normal; }
+  }
+
+  ul.games {
+    list-style: none; padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 14px;
+  }
+  li.game {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px 16px;
+  }
+  .name { font-size: 17px; font-weight: 700; margin: 0; }
+  .slug { font-size: 12px; color: var(--ink-soft); margin: 2px 0 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .links { display: flex; flex-wrap: wrap; gap: 8px; }
+  .links a {
+    flex: 1 1 auto; text-align: center; text-decoration: none;
+    font-size: 14px; font-weight: 600;
+    padding: 9px 10px; border-radius: 8px; color: #fff;
+  }
+  .links a.member { background: var(--member); }
+  .links a.guest { background: var(--guest); }
+  .links a.demo {
+    background: transparent; color: var(--ink-soft);
+    border: 1px solid var(--line); flex: 0 0 auto;
+  }
+  .links a[aria-disabled="true"] { opacity: .38; pointer-events: none; }
+  footer { margin-top: 28px; font-size: 12px; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>학습게임 12종 — 검수용 모음</h1>
+  <p class="sub">레벨과 회원을 고르면 12개 게임 링크가 그대로 바뀝니다. <strong>회원모드</strong>와 <strong>게스트모드</strong>로 각각 열 수 있습니다.</p>
+</header>
+
+<section class="panel">
+  <div class="row">
+    <span class="label">레벨</span>
+    <div class="levels" id="levels"></div>
+  </div>
+  <div class="row">
+    <span class="label">테스트 회원</span>
+    <select id="fu"></select>
+    <input type="text" id="fuCustom" class="mono" placeholder="직접 입력" hidden size="24" />
+  </div>
+  <div class="row">
+    <span class="label">언어</span>
+    <select id="locale">
+      <option value="">ko_KR (기본)</option>
+      <option value="en_US">en_US</option>
+      <option value="ja_JP">ja_JP</option>
+      <option value="zh_CN">zh_CN</option>
+    </select>
+  </div>
+  <p class="now" id="now"></p>
+  <p class="warn">
+    <strong>서버에서는 <code>?test_mode=member</code> · <code>?test_mode=guest</code> 가 듣지 않습니다.</strong>
+    각 게임의 <code>content-loader.js</code> 가 그 값을 <code>file://</code> 과 <code>localhost</code>·<code>127.0.0.1</code> 에서만 받습니다.
+    그래서 이 페이지는 규약대로 <code>fc_id</code> 와 <code>fu_id</code> 로 두 모드를 가릅니다.
+  </p>
+</section>
+
+<details class="notes" id="round2-notes">
+  <summary>2차 수정 안내<span>검수 서버에서 보이는 것과 그 이유 · 2026-10-02 기준</span></summary>
+
+  <h3>A. 서버 · API 설정 때문인 것</h3>
+  <p class="lead">게임 코드가 아니라 API 에서 내려주는 값으로 정해지는 것입니다.</p>
+  <table>
+    <thead><tr><th>보이는 것</th><th>이유</th><th>고칠 곳</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="what">모든 게임이 한 판 <strong>2분</strong></td>
+        <td>검수 API 가 9개 레벨 모두 <code>play_time</code> 120초를 보냅니다. 게임은 API 값을 먼저 쓰고, 값이 없을 때만 기본값(워드매치 40초, 블록 단어 · 실로폰 단어 180초, Star word · 터치 단어 · 워드 파이프 210초)을 씁니다.</td>
+        <td class="fix">API <code>play_time</code></td>
+      </tr>
+      <tr>
+        <td class="what">시간이 남았는데 단어가 없어 게임이 끝남</td>
+        <td>블록 단어(7문제) · 실로폰 단어(10) · Star word(10) · 터치 단어(12) · 워드 파이프(12)는 정해진 문제를 다 풀면 결과로 가는 규칙입니다. 한 판 시간이 길어 시간이 남습니다. Star word LV1(6문제) · LV2(8문제)는 미로 칸에 놓을 수 있는 단어가 적어 문제가 더 적습니다.</td>
+        <td class="fix">API <code>play_time</code></td>
+      </tr>
+      <tr>
+        <td class="what">랭킹 1위 · 내 최고 점수가 볼 때마다 다름</td>
+        <td>같은 요청을 연달아 보내도 검수 랭킹 응답이 매번 다르게 옵니다. 게임은 받은 목록을 그대로 그립니다.</td>
+        <td class="fix">검수 랭킹 서버</td>
+      </tr>
+      <tr>
+        <td class="what">아주 긴 뜻(70~87자)의 글자가 작음</td>
+        <td>서버가 내려준 단어를 빼지 않고 칸에 맞게 줄여 넣기로 해서, 가장 긴 뜻은 20px 안팎까지 작아집니다.</td>
+        <td class="fix">API 뜻 문구</td>
+      </tr>
+      <tr>
+        <td class="what">도움말에 기호가 글자 그대로 보임</td>
+        <td><code>\n</code> · <code>&amp;amp;</code> 처럼 알아볼 수 있는 기호는 풀어서 보여 주고, 잘못된 코드는 고쳐 쓰지 않고 그대로 둡니다.</td>
+        <td class="fix">API 도움말 문구</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>B. 게임마다 다르게 둔 것</h3>
+  <table>
+    <thead><tr><th>보이는 것</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="what">결과 화면 점수 밑 문구가 게임마다 다름</td>
+        <td>카드 짝 맞추기는 "점수와 순위를 저장했습니다."로 고정해 Ranking 을 눌러도 바꾸지 않습니다(두더지 잡기도 바뀌지 않음). OX 퀴즈 · 축구 · 바다속 단어 · 레이싱은 Ranking 을 열면 "…님의 최고 점수는 …"으로 바뀌는 지금 동작 그대로입니다. 스펠링 게임은 랭킹이 없습니다.</td>
+      </tr>
+      <tr>
+        <td class="what">시간이 남았는데 끝나는 게임</td>
+        <td>문제 수 규칙은 그대로 두고, 한 판 시간은 API 로 맞추기로 했습니다(위 A 두 번째 줄).</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>C. 검수하실 때 참고</h3>
+  <ul>
+    <li><strong>회원모드</strong>로 한 판을 끝까지 하면 고른 테스트 회원의 점수가 실제로 저장됩니다.</li>
+    <li>Safari · 아이패드에서는 아직 확인하지 못했습니다. 마지막 10초 빨강 깜박임, 긴 영어의 두 줄 나눔, 시작 버튼 광택이 다르게 보일 수 있습니다.</li>
+    <li>2차 수정 반영 현황(2026-10-02 기준)
+      <ul>
+        <li>12개 게임 모두 검수 서버에 반영했습니다: 바다속 단어 · 실로폰 단어 · OX 퀴즈 · 두더지 잡기 · 축구 · 레이싱 · 카드 짝 맞추기 · Star word · 터치 단어 · 블록 단어 · 워드 파이프 · 따라 쓰기</li>
+      </ul>
+    </li>
+  </ul>
+</details>
+
+<ul class="games" id="games"></ul>
+
+<footer id="foot"></footer>
+
+<script>
+(function () {
+  "use strict";
+
+  // 사장님이 주신 레벨별 콘텐츠 테스트 번호. LV7 이 표시돼 있어 그것으로 시작한다.
+  var LEVELS = [
+    { name: "LV1", fc: "C0011224" },
+    { name: "LV2", fc: "C0005852" },
+    { name: "LV3", fc: "C0007425" },
+    { name: "LV4", fc: "C0005803" },
+    { name: "LV5", fc: "C0009059" },
+    { name: "LV6", fc: "C0006978" },
+    { name: "LV7", fc: "C0002835" },
+    { name: "LV8", fc: "C0008687" },
+    { name: "LV9", fc: "C0006341" }
+  ];
+  var DEFAULT_LEVEL = "LV7";
+
+  // 테스트용 회원 번호. 게스트모드에는 붙지 않는다.
+  var MEMBERS = [
+    "U201803221135520456",
+    "U201904271305601528",
+    "U202003191057669023"
+  ];
+
+  // 폴더 이름은 올린 그대로다. 이름은 검수표에 실린 제목을 쓴다.
+  var GAMES = [
+    { slug: "wordmathch_seashellgame",  name: "바다속 단어 (버블 터치)" },
+    { slug: "wordmathch_spelling",      name: "실로폰 단어" },
+    { slug: "wordmathch_oxquizegame",   name: "OX 퀴즈" },
+    { slug: "wordmathch_molegame",      name: "두더지 잡기" },
+    { slug: "wordmathch_soccer",        name: "축구" },
+    { slug: "wordmatch_racing",         name: "레이싱" },
+    { slug: "wordmatch_cardmatch",      name: "카드 짝 맞추기" },
+    { slug: "spellingbuilde_start",     name: "Star word" },
+    { slug: "spellingbuilde_classroom", name: "터치 단어" },
+    { slug: "spellingbuilde_block",     name: "블록 단어" },
+    { slug: "spellingbuilder_waterpipe", name: "워드 파이프" },
+    { slug: "spellingbuilder_write",    name: "따라 쓰기" }
+  ];
+
+  var STORE_KEY = "lf-v2-launcher";
+  var levelsBox = document.getElementById("levels");
+  var fuSelect = document.getElementById("fu");
+  var fuCustom = document.getElementById("fuCustom");
+  var localeSelect = document.getElementById("locale");
+  var nowLine = document.getElementById("now");
+  var list = document.getElementById("games");
+
+  var state = { level: DEFAULT_LEVEL, fu: MEMBERS[0], locale: "" };
+
+  // 고른 것을 되살린다. 브라우저가 막아 두면 기본값으로 시작한다.
+  try {
+    var saved = JSON.parse(window.localStorage.getItem(STORE_KEY) || "{}");
+    if (saved.level) state.level = saved.level;
+    if (typeof saved.fu === "string") state.fu = saved.fu;
+    if (typeof saved.locale === "string") state.locale = saved.locale;
+  } catch (error) { /* 사생활 보호 창 등 */ }
+
+  function save() {
+    try { window.localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+    catch (error) { /* 저장 못 해도 링크는 그대로 돈다 */ }
+  }
+
+  function currentLevel() {
+    for (var i = 0; i < LEVELS.length; i += 1) {
+      if (LEVELS[i].name === state.level) return LEVELS[i];
+    }
+    return LEVELS[0];
+  }
+
+  function currentMember() {
+    return state.fu === "__custom" ? fuCustom.value.trim() : state.fu;
+  }
+
+  // X 를 누르면 이 모음 페이지로 돌아오게 한다.
+  // 게임은 한 층 아래에 있으므로 "../index.html" 이면 어느 방에서든 이 페이지를 가리키고,
+  // 상대 주소라 늘 같은 출처다 — 게임 쪽 같은-출처 검사에 걸릴 일이 없다.
+  function closeUrl() {
+    return "../index.html";
+  }
+
+  function link(slug, params) {
+    var query = Object.keys(params)
+      .filter(function (key) { return params[key]; })
+      .map(function (key) {
+        return encodeURIComponent(key) + "=" + encodeURIComponent(params[key]);
+      })
+      .join("&");
+    return slug + "/index.html" + (query ? "?" + query : "");
+  }
+
+  function buildLevels() {
+    LEVELS.forEach(function (level) {
+      var button = document.createElement("button");
+      button.type = "button";
+      button.textContent = level.name;
+      button.title = level.fc;
+      button.addEventListener("click", function () {
+        state.level = level.name;
+        save();
+        render();
+      });
+      levelsBox.appendChild(button);
+    });
+  }
+
+  function buildMembers() {
+    MEMBERS.forEach(function (id) {
+      var option = document.createElement("option");
+      option.value = id;
+      option.textContent = id;
+      fuSelect.appendChild(option);
+    });
+    var custom = document.createElement("option");
+    custom.value = "__custom";
+    custom.textContent = "직접 입력…";
+    fuSelect.appendChild(custom);
+
+    fuSelect.addEventListener("change", function () {
+      state.fu = fuSelect.value;
+      save();
+      render();
+    });
+    fuCustom.addEventListener("input", function () { render(); });
+    localeSelect.addEventListener("change", function () {
+      state.locale = localeSelect.value;
+      save();
+      render();
+    });
+  }
+
+  function render() {
+    var level = currentLevel();
+    var member = currentMember();
+
+    // 고른 것을 화면 요소에 되비춘다.
+    Array.prototype.forEach.call(levelsBox.children, function (button) {
+      button.setAttribute("aria-pressed", String(button.textContent === state.level));
+    });
+    fuSelect.value = state.fu;
+    fuCustom.hidden = state.fu !== "__custom";
+    localeSelect.value = state.locale;
+
+    nowLine.textContent =
+      "지금 고른 것 — " + level.name + " · fc_id " + level.fc
+      + " · 회원모드 fu_id " + (member || "(없음)")
+      + (state.locale ? " · " + state.locale : "");
+
+    list.textContent = "";
+    GAMES.forEach(function (game) {
+      var item = document.createElement("li");
+      item.className = "game";
+
+      var name = document.createElement("p");
+      name.className = "name";
+      name.textContent = game.name;
+
+      var slug = document.createElement("p");
+      slug.className = "slug";
+      slug.textContent = game.slug;
+
+      var links = document.createElement("div");
+      links.className = "links";
+
+      var memberLink = document.createElement("a");
+      memberLink.className = "member";
+      memberLink.textContent = "회원모드";
+      memberLink.href = link(game.slug, { fc_id: level.fc, fu_id: member, "api-locale": state.locale, close_url: closeUrl() });
+      // 회원 번호를 직접 입력하다 비운 경우에만 막는다.
+      memberLink.setAttribute("aria-disabled", String(!member));
+
+      var guestLink = document.createElement("a");
+      guestLink.className = "guest";
+      guestLink.textContent = "게스트모드";
+      guestLink.href = link(game.slug, { fc_id: level.fc, "api-locale": state.locale, close_url: closeUrl() });
+
+      // 데모는 콘텐츠 번호 없이 내장 단어로 화면만 보는 길이다.
+      var demoLink = document.createElement("a");
+      demoLink.className = "demo";
+      demoLink.textContent = "데모";
+      demoLink.href = link(game.slug, { demo: "1", close_url: closeUrl() });
+
+      links.appendChild(memberLink);
+      links.appendChild(guestLink);
+      links.appendChild(demoLink);
+
+      item.appendChild(name);
+      item.appendChild(slug);
+      item.appendChild(links);
+      list.appendChild(item);
+    });
+  }
+
+  buildLevels();
+  buildMembers();
+  render();
+  document.getElementById("foot").textContent =
+    "게임 " + GAMES.length + "개 · 레벨 " + LEVELS.length + "개 · 각 폴더의 index.html 을 그대로 엽니다.";
+})();
+</script>
+
+</body>
+</html>

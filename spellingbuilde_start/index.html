@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Spelling Builder - Star word</title>
+    <link rel="stylesheet" href="styles.css?v=20261015-2" />
+  </head>
+  <body>
+    <div class="stage-frame">
+      <section id="game-stage" class="game-stage" aria-label="한글 뜻을 보고 이웃한 칸을 순서대로 눌러 영어 단어를 완성하는 미로 게임">
+
+        <!-- 순간 알림. 형제와 같은 자리·같은 역할이다. -->
+        <p id="status-toast" class="status-toast" role="status" aria-live="polite"></p>
+
+        <!--
+          공용 버튼. wordmathch_spelling과 같은 배치다.
+          사운드는 왼쪽 상단, 닫기·뒤로가기는 오른쪽 상단, 도움말은 오른쪽 하단.
+          기획서 확정 사항인 "하단 바 없는 UI"와도 어긋나지 않는다.
+        -->
+        <div id="stage-tools" class="stage-tools" hidden>
+          <button id="sound-button" class="global-control sound-button is-on" type="button" aria-label="소리 끄기" aria-pressed="true"></button>
+          <button id="navigation-button" class="global-control navigation-button" type="button" aria-label="게임 닫기"></button>
+          <button id="help-button" class="global-control help-button" type="button" aria-label="도움말"></button>
+        </div>
+
+        <!-- 시작 화면 -->
+        <section id="start-screen" class="screen start-screen" aria-label="시작 화면" hidden>
+          <div class="bg-twinkles" aria-hidden="true">
+            <span class="twinkle tw-1"></span>
+            <span class="twinkle tw-2"></span>
+            <span class="twinkle tw-3"></span>
+            <span class="twinkle tw-4"></span>
+            <span class="twinkle tw-5"></span>
+            <span class="twinkle tw-6"></span>
+            <span class="twinkle tw-7"></span>
+            <span class="twinkle tw-8"></span>
+            <span class="twinkle tw-9"></span>
+            <span class="twinkle tw-10"></span>
+            <span class="twinkle tw-11"></span>
+            <span class="twinkle tw-12"></span>
+            <span class="twinkle tw-13"></span>
+            <span class="twinkle tw-14"></span>
+              <span class="shooting-star sshoot-1"></span>
+            <span class="shooting-star sshoot-2"></span>
+            <span class="shooting-star sshoot-3"></span>
+          </div>
+          <div class="start-hero">
+            <div class="start-sparks" aria-hidden="true">
+              <span class="spark spark-50"></span>
+              <span class="spark spark-gold"></span>
+              <span class="spark spark-48"></span>
+              <span class="spark spark-49"></span>
+              <span class="spark spark-47"></span>
+              <span class="spark spark-46"></span>
+              <span class="spark spark-51"></span>
+              <span class="spark spark-big"></span>
+            </div>
+            <img class="start-fox" src="assets/start/char.png" alt="" draggable="false" />
+            <h1 class="start-logo">
+              <img src="assets/start/logo.png" alt="Spelling Builder" draggable="false" />
+            </h1>
+          </div>
+
+          <!-- 2차 검수 공통-9: 동화 정보(info 의 title · subtitle). 로고와 Start 사이, 배경 없음. 값이 없으면 숨긴다. -->
+          <div id="start-story" class="start-story" aria-label="동화 정보" hidden>
+            <p id="start-story-title" class="start-story-line start-story-title"></p>
+            <p id="start-story-subtitle" class="start-story-line start-story-subtitle"></p>
+          </div>
+
+          <nav class="start-menu" aria-label="시작 메뉴">
+            <button id="start-button" class="start-menu-button start-menu-button-play" type="button" aria-busy="true" disabled>
+              <span>Start</span>
+            </button>
+          </nav>
+        </section>
+
+        <!-- 게임 화면 -->
+        <section id="play-screen" class="screen play-screen" aria-label="Star word" hidden>
+          <!-- 배경 별 반짝임과 별똥별. 게임 요소를 피한 자리에만 둔다. -->
+          <div class="play-sky" aria-hidden="true">
+            <span class="twinkle gtw-1"></span>
+            <span class="twinkle gtw-2"></span>
+            <span class="twinkle gtw-3"></span>
+            <span class="twinkle gtw-4"></span>
+            <span class="twinkle gtw-5"></span>
+            <span class="twinkle gtw-6"></span>
+            <span class="twinkle gtw-7"></span>
+            <span class="twinkle gtw-8"></span>
+            <span class="twinkle gtw-9"></span>
+            <span class="twinkle gtw-10"></span>
+            <span class="twinkle gtw-11"></span>
+            <span class="twinkle gtw-12"></span>
+            <span class="shooting-star shoot-1"></span>
+            <span class="shooting-star shoot-2"></span>
+            <span class="shooting-star shoot-3"></span>
+          </div>
+
+          <div class="meaning-panel">
+            <p id="meaning-text" class="meaning-text" aria-live="polite"></p>
+          </div>
+
+          <!-- 2차 검수 SB4-확인1: 단어 듣기 스피커 버튼은 지웠다. 정답 뒤 자동 발음은 그대로다. -->
+
+          <div class="maze-area">
+            <div id="start-arrow" class="start-arrow" aria-hidden="true" hidden></div>
+            <div
+              id="maze-grid"
+              class="maze-grid"
+              role="grid"
+              aria-label="철자 칸. 화살표가 가리키는 입구 칸부터 이웃한 칸으로 순서대로 끌거나 눌러, 마지막 열의 출구에서 단어를 끝내세요."
+            ></div>
+          </div>
+
+          <!-- 여우는 상태에 따라 세 가지로 바뀐다: 평소 / 맞혔을 때 / 기회를 다 썼을 때 -->
+          <img id="play-fox" class="play-fox" src="assets/game/effect_ani_idle.webp" alt="" aria-hidden="true" />
+
+          <div class="gauge gauge-score">
+            <p class="gauge-label">Score</p>
+            <p id="score-value" class="gauge-value" aria-live="polite">0</p>
+            <!-- 검수 r11: 보너스 순간 점수 원 위로 떠오르는 "보너스 +100" (09-15 형제 카드·두더지 방과 같다). -->
+            <span id="score-delta" class="score-delta" aria-hidden="true"></span>
+          </div>
+
+          <div class="gauge gauge-timer">
+            <p id="progress-value" class="gauge-progress" aria-live="polite">1/10</p>
+            <p id="timer-value" class="gauge-clock">03:30</p>
+          </div>
+
+          <!-- 기획서 2-1 / 3회 오답: 정답 공개와 단어 사운드를 문제 영역 위에 겹친다. -->
+          <div id="answer-reveal" class="answer-reveal" role="status" aria-live="assertive" hidden>
+            <p id="answer-reveal-word" class="answer-reveal-word"></p>
+          </div>
+        </section>
+
+        <!-- 결과 화면. 구조와 좌표는 wordmathch_spelling과 같다. -->
+        <section id="end-screen" class="screen end-screen" aria-label="게임 결과" hidden>
+          <!-- 검수 4차 9-2: 새로고침이 아니라 시작 화면으로 나가는 X 버튼이다. 2차 검수 공통-3: 오른쪽 위. -->
+          <button id="result-home-button" class="result-home-button" type="button" aria-label="시작 화면으로">
+            <img src="assets/public/btn_close.png" alt="" draggable="false" />
+          </button>
+
+          <img class="result-background" src="assets/bg.png" alt="" draggable="false" />
+          <!-- 판 안쪽만 가라앉힌다. 밖의 밤풍경은 그대로 둔다. -->
+          <div class="result-plate-dim" aria-hidden="true"></div>
+          <img class="result-layout" src="assets/result/bg.png?v=20260929" alt="" draggable="false" />
+          <canvas
+            id="result-particle-canvas"
+            class="result-particle-canvas"
+            width="1920"
+            height="1080"
+            aria-hidden="true"
+          ></canvas>
+          <!--
+            등급별 여우. 카드 상단선에 앞발이 닿게 얹는다 — 시안대로 가려지는 곳은 없다.
+            이 방 카드는 배경 그림(result/bg.png) 안에 그려져 있어 여우를 그 뒤로 보내면
+            카드 위쪽 밤하늘이 불투명이라 아예 보이지 않는다. 그래서 배경보다 위에 둔다.
+          -->
+          <!-- 주소는 fillResult 가 등급을 보고 넣는다. 여기에 한 장을 박아 두면 첫 판이
+               그 등급이 아닐 때 잘못된 여우를 보여줄 수 있어, 초기 src 를 두지 않는다. -->
+          <img id="result-fox" class="result-fox" alt="" draggable="false" />
+          <img
+            id="result-headline"
+            class="result-title"
+            src="assets/result/result_text1.png?v=20260929"
+            alt="Good"
+            draggable="false"
+          />
+
+          <!-- 2차 검수 공통-2: '개' · '+' 없이 숫자만. Bonus 뒤 '점' 은 CSS 가 붙인다. -->
+          <output id="result-correct" class="result-points result-points-correct" aria-label="정답 0개">0</output>
+          <output id="result-incorrect" class="result-points result-points-incorrect" aria-label="오답 0개">0</output>
+          <output id="result-bonus" class="result-points result-points-bonus" aria-label="보너스 점수 0점">0</output>
+
+          <!-- 2차 검수 SB공통-2: 트로피 상자 그림 없이 점수만 가운데에 둔다. -->
+          <div class="result-total" aria-label="내 점수">
+            <output id="result-total-score" class="result-total-score" aria-label="0점">
+              <span id="result-total-value" class="result-score-number">0</span>
+              <span class="result-score-unit">점</span>
+            </output>
+          </div>
+
+          <p id="result-message" class="result-message" role="status" aria-live="polite"></p>
+
+          <nav class="result-actions" aria-label="결과 화면 메뉴">
+            <button id="incorrect-answers-button" class="result-action" type="button" aria-label="오답 없음" disabled>
+              <img src="assets/result/btn1.png" alt="Incorrect Answers" draggable="false" />
+            </button>
+            <button id="try-again-button" class="result-action" type="button" aria-label="다시 하기">
+              <img src="assets/result/btn2.png" alt="Try Again" draggable="false" />
+            </button>
+          </nav>
+        </section>
+
+        <!-- 오답노트. 구조와 열 구성은 wordmathch_spelling과 같다. -->
+        <div id="incorrect-answer-dialog" class="incorrect-answer-dialog" hidden>
+          <button id="incorrect-answer-backdrop" class="incorrect-answer-backdrop" type="button" tabindex="-1" aria-label="오답 목록 닫기"></button>
+          <section class="incorrect-answer-modal" role="dialog" aria-modal="true" aria-labelledby="incorrect-answer-title">
+            <!-- 제목은 배경 그림에 이미 그려져 있어 화면에는 내지 않는다. -->
+            <h2 id="incorrect-answer-title" class="visually-hidden">Incorrect Answers</h2>
+            <img
+              class="incorrect-answer-background"
+              src="assets/incorrect-answer/bg_incorrect.png"
+              alt=""
+              width="1347"
+              height="980"
+              draggable="false"
+            />
+            <button id="incorrect-answer-close" class="incorrect-answer-close" type="button" aria-label="오답 목록 닫기">
+              <img src="assets/incorrect-answer/btn_close_popup.png" alt="" width="77" height="87" draggable="false" />
+            </button>
+
+            <div class="incorrect-answer-table" role="table" aria-label="오답 목록">
+              <div class="incorrect-answer-header incorrect-answer-grid" role="row">
+                <span role="columnheader"><span class="visually-hidden">발음</span></span>
+                <span role="columnheader">단어</span>
+                <span role="columnheader">뜻</span>
+              </div>
+              <div id="incorrect-answer-list" class="incorrect-answer-list" role="rowgroup" tabindex="0" aria-label="오답 단어 목록"></div>
+            </div>
+          </section>
+        </div>
+
+        <!-- 도움말. 형제 프로젝트와 같이 팝업이 아니라 전용 배경의 전체 화면이다. -->
+        <section id="help-dialog" class="screen help-screen" role="dialog" aria-labelledby="help-title" hidden>
+          <img class="help-background" src="assets/bg.png" alt="" width="1920" height="1080" draggable="false" />
+          <h2 id="help-title" class="visually-hidden">도움말</h2>
+          <div class="help-content-viewport" tabindex="0">
+            <div id="help-content" class="help-content"></div>
+            <div id="help-status" class="help-status" role="status" aria-live="polite">
+              <span id="help-status-text">도움말을 불러오는 중입니다.</span>
+              <button id="help-retry-button" class="help-retry-button" type="button" hidden>Retry</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 로딩 / 오류 -->
+        <section id="loading-screen" class="loading-screen" aria-live="polite">
+          <div class="loading-card">
+            <span class="loading-spinner" aria-hidden="true"></span>
+            <h2 id="loading-title" class="loading-title">게임 준비 중</h2>
+            <p id="loading-message" class="loading-message">단어와 게임 정보를 불러오고 있습니다.</p>
+            <button id="retry-button" class="retry-button" type="button" hidden>다시 시도</button>
+          </div>
+        </section>
+      </section>
+    </div>
+
+    <script type="application/json" id="gameConfig">
+      {
+        "deployment": {
+          "apiBaseUrl": "https://apis-review.littlefox.com",
+          "apiUserAgent": "LITTLEFOX_VOCA_WEB:desktop/1.0.0/browser/Web:unknown"
+        },
+        "demo": {
+          "info": { "play_time": 210 },
+          "words": [
+            { "text": "apple", "mean": "사과" },
+            { "text": "comet", "mean": "혜성" },
+            { "text": "orbit", "mean": "궤도" },
+            { "text": "rocket", "mean": "로켓" },
+            { "text": "saturn", "mean": "토성" },
+            { "text": "planet", "mean": "행성" },
+            { "text": "galaxy", "mean": "은하" },
+            { "text": "eclipse", "mean": "일식" },
+            { "text": "gravity", "mean": "중력" },
+            { "text": "telescope", "mean": "망원경" },
+            { "text": "astronaut", "mean": "우주 비행사" },
+            { "text": "satellite", "mean": "인공위성" }
+          ]
+        }
+      }
+    </script>
+
+    <script src="maze.js"></script>
+    <script src="rules.js?v=20261002"></script>
+    <script src="api-client.js"></script>
+    <script src="content-loader.js?v=20261015-1"></script>
+    <script src="script.js?v=20261015-2"></script>
+  </body>
+</html>
